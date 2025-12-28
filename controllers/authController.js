@@ -440,13 +440,20 @@ exports.isLoggedIn = async (req, res, next) => {
         process.env.JWT_SECRET
       );
 
-      // 2) Check if user still exists
+      // 2) Check if token is blacklisted (revoked)
+      const isBlacklisted = await TokenBlacklist.isTokenBlacklisted(req.cookies.jwt);
+      if (isBlacklisted) {
+        // Token was revoked via logout
+        return next();
+      }
+
+      // 3) Check if user still exists
       const currentUser = await User.findById(decoded.id);
       if (!currentUser) {
         return next();
       }
       
-      // 3) Check if user is banned - clear cookie and redirect
+      // 4) Check if user is banned - clear cookie and redirect
       if (currentUser.active == "ban") {
         res.cookie("jwt", "loggedout", {
           expires: new Date(Date.now() + 10 * 1000),
