@@ -453,12 +453,9 @@ exports.isLoggedIn = async (req, res, next) => {
         return next();
       }
       
-      // 4) Check if user is banned - clear cookie and redirect
+      // 4) Check if user is banned - clear cookie
       if (currentUser.active == "ban") {
-        res.cookie("jwt", "loggedout", {
-          expires: new Date(Date.now() + 10 * 1000),
-          httpOnly: true,
-        });
+        res.clearCookie("jwt", { path: "/" });
         return next();
       }
       
@@ -646,19 +643,9 @@ exports.logout = catchAsync(async (req, res, next) => {
       }
     }
 
-    // SECURITY: Clear both access and refresh tokens
-    res.cookie("jwt", "loggedout", {
-      expires: new Date(Date.now() + 10 * 1000),
-      httpOnly: true,
-      sameSite: "strict",
-      path: "/",
-    });
-    res.cookie("refreshToken", "loggedout", {
-      expires: new Date(Date.now() + 10 * 1000),
-      httpOnly: true,
-      sameSite: "strict",
-      path: "/",
-    });
+    // SECURITY: Clear both access and refresh tokens by deleting cookies
+    res.clearCookie("jwt", { path: "/" });
+    res.clearCookie("refreshToken", { path: "/" });
 
     // Check if request is from admin panel (has html accept header) or API (json)
     if (req.accepts("html") && !req.headers.accept.includes("application/json")) {
@@ -669,15 +656,9 @@ exports.logout = catchAsync(async (req, res, next) => {
       res.status(200).json({ status: "success", message: "Logged out successfully" });
     }
   } catch (err) {
-    // Even if blacklist fails, complete logout
-    res.cookie("jwt", "loggedout", {
-      expires: new Date(Date.now() + 10 * 1000),
-      httpOnly: true,
-    });
-    res.cookie("refreshToken", "loggedout", {
-      expires: new Date(Date.now() + 10 * 1000),
-      httpOnly: true,
-    });
+    // Even if blacklist fails, complete logout - clear cookies
+    res.clearCookie("jwt", { path: "/" });
+    res.clearCookie("refreshToken", { path: "/" });
     // Check if request is from admin panel or API
     if (req.accepts("html") && !req.headers.accept.includes("application/json")) {
       res.redirect("/login");
