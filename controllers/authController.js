@@ -660,7 +660,14 @@ exports.logout = catchAsync(async (req, res, next) => {
       path: "/",
     });
 
-    res.status(200).json({ status: "success", message: "Logged out successfully" });
+    // Check if request is from admin panel (has html accept header) or API (json)
+    if (req.accepts("html") && !req.headers.accept.includes("application/json")) {
+      // Admin panel logout - redirect to login page
+      res.redirect("/login");
+    } else {
+      // API logout - return JSON response
+      res.status(200).json({ status: "success", message: "Logged out successfully" });
+    }
   } catch (err) {
     // Even if blacklist fails, complete logout
     res.cookie("jwt", "loggedout", {
@@ -671,7 +678,12 @@ exports.logout = catchAsync(async (req, res, next) => {
       expires: new Date(Date.now() + 10 * 1000),
       httpOnly: true,
     });
-    res.status(200).json({ status: "success", message: "Logged out successfully" });
+    // Check if request is from admin panel or API
+    if (req.accepts("html") && !req.headers.accept.includes("application/json")) {
+      res.redirect("/login");
+    } else {
+      res.status(200).json({ status: "success", message: "Logged out successfully" });
+    }
   }
 });
 
