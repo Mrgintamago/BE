@@ -173,20 +173,16 @@ $(document).on("click", ".remove-image", function () {
 
 // Đăng bài
 $("#publish-btn").on("click", function () {
-  // Lấy nội dung từ TinyMCE nếu có, nếu không thì lấy từ textarea
+  // Lấy nội dung từ TinyMCE
   let content = "";
-  if (typeof tinymce !== "undefined" && tinymce.get("content")) {
-    content = tinymce.get("content").getContent().trim();
-  } else {
-    content = $("#content").val().trim();
-  }
-  
-  // Lấy text thuần (không HTML) để làm title nếu chưa có title
   let plainText = "";
-  if (typeof tinymce !== "undefined" && tinymce.get("content")) {
-    plainText = tinymce.get("content").getContent({ format: "text" }).trim();
+  
+  if (typeof tinymce !== "undefined" && tinymce.get("news-content")) {
+    content = tinymce.get("news-content").getContent().trim();
+    plainText = tinymce.get("news-content").getContent({ format: "text" }).trim();
   } else {
-    plainText = $("#content").val().trim();
+    content = $("#news-content").val().trim();
+    plainText = content;
   }
   
   const title = $("#title").val().trim();
@@ -232,10 +228,11 @@ $("#publish-btn").on("click", function () {
     success: function (data) {
       showAlert("success", "Đăng bài thành công!");
       $("#title").val("");
-      if (typeof tinymce !== "undefined" && tinymce.get("content")) {
-        tinymce.get("content").setContent("");
+      // Clear TinyMCE content
+      if (typeof tinymce !== "undefined" && tinymce.get("news-content")) {
+        tinymce.get("news-content").setContent("");
       } else {
-        $("#content").val("");
+        $("#news-content").val("");
       }
       selectedImages = [];
       updateImagePreview();
@@ -271,22 +268,18 @@ $(document).on("click", ".edit", function () {
   if (typeof tinymce !== "undefined" && !tinymce.get("edit_content")) {
             tinymce.init({
               selector: "#edit_content",
-              apiKey: "drdsavnt5nymqwx6kmjmjqrg91fecphxtxu37d8p9qk9zns9",
+              license_key: "gpl",
               height: 300,
+              max_height: 300,
+              resize: false,
               menubar: false,
-              plugins: [
-                "advlist", "autolink", "lists", "link", "image", "charmap", "preview",
-                "anchor", "searchreplace", "visualblocks", "code", "fullscreen",
-                "insertdatetime", "media", "table", "code", "help", "wordcount", "emoticons"
-              ],
-              toolbar: "undo redo | formatselect | " +
-                "bold italic backcolor | alignleft aligncenter " +
-                "alignright alignjustify | bullist numlist outdent indent | " +
-                "removeformat | help | emoticons",
-              content_style: "body { font-family: Arial, sans-serif; font-size: 14px; }",
-              language: "vi",
+              statusbar: false,
               branding: false,
-              promotion: false
+              promotion: false,
+              plugins: "lists link emoticons",
+              toolbar: "bold italic underline | bullist numlist | link emoticons",
+              content_style: "body { font-family: Arial, sans-serif; font-size: 14px; }",
+              language: "vi"
             });
   }
 
@@ -358,6 +351,28 @@ $(document).on("click", ".remove-current-image", function () {
   const index = $(this).data("index");
   currentImages.splice(index, 1);
   updateCurrentImages();
+});
+
+// Preview ảnh mới được chọn trong modal edit
+$(document).on("change", "#edit_images", function (e) {
+  const files = Array.from(e.target.files);
+  const container = $("#new-images-preview");
+  container.empty();
+  
+  files.forEach((file, index) => {
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = function (event) {
+        const imageDiv = $(`
+          <div class="position-relative" style="width: 100px;">
+            <img src="${event.target.result}" class="img-thumbnail" style="width: 100%; height: 100px; object-fit: cover;">
+          </div>
+        `);
+        container.append(imageDiv);
+      };
+      reader.readAsDataURL(file);
+    }
+  });
 });
 
 // Submit form chỉnh sửa

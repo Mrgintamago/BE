@@ -461,8 +461,18 @@ exports.getTable = (Model) =>
       // Filter đặc biệt cho User model
       if (Model == User) filter["role"] = { $ne: "admin" };
 
-      const recordsTotal = await Model.countDocuments({});
-      const recordsFiltered = await Model.countDocuments(filter);
+      let recordsTotal = 0;
+      let recordsFiltered = 0;
+      try {
+        recordsTotal = await Model.countDocuments({});
+      } catch (e) {
+        console.warn("countDocuments total error:", e);
+      }
+      try {
+        recordsFiltered = await Model.countDocuments(filter);
+      } catch (e) {
+        console.warn("countDocuments filtered error:", e);
+      }
       
       // Build query với populate nếu cần (pre hook sẽ tự động populate)
       let query = Model.find(filter)
@@ -481,13 +491,19 @@ exports.getTable = (Model) =>
       // Không dùng lean() để pre hook populate hoạt động
       const results = await query;
 
+      // Fallback nếu count lỗi hoặc trả về 0 nhưng vẫn có data
+      if ((!recordsTotal || recordsTotal < results.length) && results.length > 0) {
+        recordsTotal = results.length;
+      }
+      if ((!recordsFiltered || recordsFiltered < results.length) && results.length > 0) {
+        recordsFiltered = results.length;
+      }
       const data = {
         draw: Number(req.query.draw) || 1,
         recordsFiltered: recordsFiltered,
         recordsTotal: recordsTotal,
         data: results,
       };
-      
       res.status(200).json(data);
     } catch (error) {
       console.error("getTable error:", error);

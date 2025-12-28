@@ -155,6 +155,27 @@
     .btn-primary:hover {
         background: #084399 !important;
     }
+    /* TinyMCE Container - Fixed Height */
+    #tinymce-container {
+        height: 300px !important;
+        max-height: 300px !important;
+        overflow: hidden !important;
+    }
+    #tinymce-container .tox.tox-tinymce {
+        height: 100% !important;
+        max-height: 300px !important;
+        border: none !important;
+    }
+    #tinymce-container .tox .tox-edit-area {
+        height: calc(100% - 45px) !important;
+        max-height: 255px !important;
+    }
+    #tinymce-container .tox .tox-edit-area__iframe {
+        height: 100% !important;
+    }
+    #tinymce-container .tox .tox-sidebar-wrap {
+        height: calc(100% - 45px) !important;
+    }
     .tox.tox-tinymce {
         border: 1px solid #e4e6eb !important;
         border-radius: 8px !important;
@@ -246,7 +267,24 @@
     .table tbody tr:hover {
         background: #f8f9fa;
     }
-</style>
+    /* Fix TinyMCE height - very important */
+    .news-post-content .tox.tox-tinymce {
+        height: 300px !important;
+        max-height: 300px !important;
+        min-height: 300px !important;
+        overflow: hidden !important;
+    }
+    .news-post-content .tox .tox-edit-area {
+        height: calc(300px - 50px) !important;
+        max-height: calc(300px - 50px) !important;
+        overflow-y: auto !important;
+    }
+    .news-post-content .tox .tox-edit-area__iframe {
+        height: 100% !important;
+    }
+    .news-post-content .tox .tox-sidebar-wrap {
+        height: calc(300px - 50px) !important;
+    }
 </style>
 
 <div class="container news-container">
@@ -270,12 +308,15 @@
         </div>
         <div class="news-post-content">
             <div class="form-group">
-                <label for="content">Nội dung bài viết</label>
-                <textarea 
-                    id="content" 
-                    class="facebook-like-input" 
-                    placeholder="Bạn đang nghĩ gì?"
-                ></textarea>
+                <label for="news-content">Nội dung bài viết</label>
+                <div id="tinymce-container" style="height: 300px; border: 1px solid #e4e6eb; border-radius: 8px; overflow: hidden;">
+                    <textarea 
+                        id="news-content" 
+                        name="content"
+                        class="facebook-like-input" 
+                        placeholder="Bạn đang nghĩ gì?"
+                    ></textarea>
+                </div>
             </div>
             <div class="form-group">
                 <label for="title">Tiêu đề (tùy chọn)</label>
@@ -288,36 +329,53 @@
             </div>
             <div class="news-post-images" id="image-preview-container"></div>
         </div>
-        <!-- Load TinyMCE from local file with Vietnamese language support -->
+        <!-- Load TinyMCE -->
         <script src="/text/tinymce.min.js"></script>
         <script>
-        // Khởi tạo TinyMCE cho textarea content nếu chưa có
-        $(document).ready(function() {
-            if (typeof tinymce !== "undefined" && !tinymce.get("content")) {
-                tinymce.init({
-                    selector: "#content",
-                    license_key: "gpl", // Use GPL license for open source
-                    height: 300,
-                    menubar: false,
-                    plugins: [
-                        "advlist", "autolink", "lists", "link", "image", "charmap", "preview",
-                        "anchor", "searchreplace", "visualblocks", "code", "fullscreen",
-                        "insertdatetime", "media", "table", "code", "help", "wordcount", "emoticons"
-                    ],
-                    toolbar: "undo redo | formatselect | " +
-                        "bold italic backcolor | alignleft aligncenter " +
-                        "alignright alignjustify | bullist numlist outdent indent | " +
-                        "removeformat | help | emoticons",
-                    content_style: "body { font-family: Arial, sans-serif; font-size: 14px; }",
-                    language: "vi",
-                    language_url: "/text/langs/vi.js",
-                    branding: false,
-                    promotion: false,
-                    license_manager_enabled: false, // Disable license manager
-                    sandbox_iframes: false // Disable iframe sandboxing
-                });
-            }
-        });
+            $(document).ready(function() {
+                // Khởi tạo TinyMCE với cấu hình chặt chẽ
+                if (typeof tinymce !== 'undefined') {
+                    tinymce.init({
+                        selector: '#news-content',
+                        license_key: 'gpl',
+                        height: 250,
+                        max_height: 250,
+                        min_height: 250,
+                        resize: false,
+                        menubar: false,
+                        statusbar: false,
+                        branding: false,
+                        promotion: false,
+                            plugins: 'lists link emoticons fontselect fontsizeselect',
+                            toolbar: 'fontselect fontsizeselect | bold italic underline | bullist numlist | link emoticons',
+                            fontsize_formats: '8pt 10pt 12pt 14pt 18pt 24pt 36pt',
+                        content_style: `
+                            body { 
+                                font-family: Arial, sans-serif; 
+                                font-size: 14px; 
+                                padding: 10px;
+                                margin: 0;
+                            }
+                            img { 
+                                max-width: 100% !important; 
+                                height: auto !important; 
+                            }
+                        `,
+                        language: 'vi',
+                        language_url: '/text/langs/vi.js',
+                        setup: function(editor) {
+                            editor.on('init', function() {
+                                // Force container height after init
+                                var container = editor.getContainer();
+                                if (container) {
+                                    container.style.height = '250px';
+                                    container.style.maxHeight = '250px';
+                                }
+                            });
+                        }
+                    });
+                }
+            });
         </script>
         <div class="post-actions">
             <label class="image-upload-btn" style="cursor: pointer;">
@@ -389,6 +447,7 @@
                     <div class="mb-3">
                         <label class="form-label">Thêm ảnh mới</label>
                         <input type="file" name="images" id="edit_images" multiple accept="image/*" class="form-control" />
+                        <div id="new-images-preview" class="d-flex flex-wrap gap-2 mt-2"></div>
                     </div>
                     
                     <div class="mb-3">
