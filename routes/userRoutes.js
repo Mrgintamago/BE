@@ -89,15 +89,16 @@ router
   .post(authController.restrictTo("super_admin"), userController.createUser);
 
 // Generic /:id route - MUST be last to not match specific routes like /logout
+// Use regex to only match valid ObjectIds, not string literals
 router
-  .route("/:id")
+  .route("/:id(^[0-9a-fA-F]{24}$)")
   .get(authController.restrictTo("super_admin", "admin"), userController.getUser)
   .patch(authController.restrictTo("super_admin"), userController.updateUser)
   .delete(authController.restrictTo("super_admin"), userController.deleteUser);
 
 // Route to update user password (Super Admin only)
 router
-  .route("/:id/updatePassword")
+  .route("/:id(^[0-9a-fA-F]{24}$)/updatePassword")
   .patch(
     authController.restrictTo("super_admin"),
     userController.updateUserPassword
