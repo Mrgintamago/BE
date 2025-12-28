@@ -614,7 +614,7 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
 exports.logout = catchAsync(async (req, res, next) => {
   try {
     // SECURITY: Prevent caching of logout response
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
     res.setHeader("Pragma", "no-cache");
     res.setHeader("Expires", "0");
     
@@ -652,24 +652,23 @@ exports.logout = catchAsync(async (req, res, next) => {
     res.clearCookie("jwt", { path: "/" });
     res.clearCookie("refreshToken", { path: "/" });
 
-    // Check if request is from admin panel (has html accept header) or API (json)
-    if (req.accepts("html") && !req.headers.accept.includes("application/json")) {
-      // Admin panel logout - redirect to login page
-      res.redirect("/login");
-    } else {
-      // API logout - return JSON response
-      res.status(200).json({ status: "success", message: "Logged out successfully" });
-    }
+    // Always return JSON (let client handle redirect)
+    // This prevents browser caching of redirect responses
+    res.status(200).json({ 
+      status: "success", 
+      message: "Logged out successfully",
+      redirect: "/login"
+    });
   } catch (err) {
     // Even if blacklist fails, complete logout - clear cookies
     res.clearCookie("jwt", { path: "/" });
     res.clearCookie("refreshToken", { path: "/" });
-    // Check if request is from admin panel or API
-    if (req.accepts("html") && !req.headers.accept.includes("application/json")) {
-      res.redirect("/login");
-    } else {
-      res.status(200).json({ status: "success", message: "Logged out successfully" });
-    }
+    
+    res.status(200).json({ 
+      status: "success", 
+      message: "Logged out successfully",
+      redirect: "/login"
+    });
   }
 });
 
