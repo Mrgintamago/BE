@@ -8,18 +8,18 @@ router.post("/userLoginWith", authController.userLoginWith);
 router.post("/signup", authController.signup);
 router.post("/login", authController.login);
 router.post("/verifyResetPass", authController.verifyResetPass);
-router.get("/logout", authController.logout);
+router.post("/verify", authController.verifyUser);
 // SECURITY: Refresh token endpoint (before protect middleware)
 router.post("/refreshToken", authController.refreshAccessToken);
 router.post("/forgotPassword", authController.forgotPassword);
 router.patch("/resetPassword/:token", authController.resetPassword);
 router.patch("/changeState", authController.changeStateUser);
-router.post("/verify", authController.verifyUser);
 
 // Protect all routes after this middleware
 router.use(authController.protect);
 
-router.post("/resendVerifyCode", authController.resendVerifyCode);
+// Logout AFTER protect - ensure we have user context and valid token
+router.post("/logout", authController.logout);
 
 router.patch("/updateMyPassword", authController.updatePassword);
 router.get("/me", userController.getMe, userController.getUser);  
