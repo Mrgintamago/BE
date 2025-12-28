@@ -18,6 +18,7 @@ router.patch("/changeState", authController.changeStateUser);
 // Protect all routes after this middleware
 router.use(authController.protect);
 
+// SPECIFIC ROUTES - must be BEFORE generic /:id routes
 // Logout AFTER protect - ensure we have user context and valid token
 router.post("/logout", authController.logout);
 
@@ -31,29 +32,21 @@ router.patch("/updateAddress", userController.updateAddress);
 router.patch("/setDefaultAddress", userController.setDefaultAddress);
 router.patch("/deleteAddress", userController.deleteAddress);
 
-// Super Admin: Full access to users (manage roles)
-// Admin: View only
-// Manager, Sales Staff: No access
 router.route("/getTableUser").get(
   authController.restrictTo("super_admin", "admin"),
   userController.getTableUser
 );
 
-// Get table for admin users (super_admin, admin, manager, sales_staff)
-// Only Super Admin can view and edit
 router.route("/getTableAdminUsers").get(
   authController.restrictTo("super_admin"),
   userController.getTableAdminUsers
 );
 
-// Get table for customer users (user, employee)
-// Super Admin and Admin can view, only Super Admin can edit
 router.route("/getTableCustomerUsers").get(
   authController.restrictTo("super_admin", "admin"),
   userController.getTableCustomerUsers
 );
-// Routes for admin users (super_admin, admin, manager, sales_staff)
-// Only Super Admin can view and edit
+
 router
   .route("/admin-users")
   .get(authController.restrictTo("super_admin"), userController.getAllAdminUsers);
@@ -71,8 +64,6 @@ router
     userController.updateUserPassword
   );
 
-// Routes for customer users (user, employee)
-// Super Admin and Admin can view, only Super Admin can edit
 router
   .route("/customer-users")
   .get(authController.restrictTo("super_admin", "admin"), userController.getAllCustomerUsers);
@@ -90,12 +81,14 @@ router
     userController.updateUserPassword
   );
 
+// GENERIC ROUTES - must be LAST
 // Legacy routes (keep for backward compatibility)
 router
   .route("/")
   .get(authController.restrictTo("super_admin", "admin"), userController.getAllUsers)
   .post(authController.restrictTo("super_admin"), userController.createUser);
 
+// Generic /:id route - MUST be last to not match specific routes like /logout
 router
   .route("/:id")
   .get(authController.restrictTo("super_admin", "admin"), userController.getUser)
