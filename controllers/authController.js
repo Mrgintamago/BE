@@ -613,6 +613,11 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
 
 exports.logout = catchAsync(async (req, res, next) => {
   try {
+    // SECURITY: Prevent caching of logout response
+    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+    res.setHeader("Pragma", "no-cache");
+    res.setHeader("Expires", "0");
+    
     // Extract JWT from cookies or Authorization header
     let token;
     if (req.cookies && req.cookies.jwt) {
