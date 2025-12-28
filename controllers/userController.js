@@ -2,6 +2,7 @@ const User = require("./../models/userModel");
 const catchAsync = require("./../utils/catchAsync");
 const AppError = require("./../utils/appError");
 const factory = require("./handlerFactory");
+const mongoose = require("mongoose");
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -108,23 +109,48 @@ exports.createAddress = catchAsync(async (req, res) => {
   });
 });
 exports.updateAddress = catchAsync(async (req, res) => {
-  const user = req.user;
-  const addressId = req.body.id; // MongoDB ObjectId
+  const userId = req.user._id;
+  let addressId = req.body.id;
   
-  if (!user.address || user.address.length === 0) {
-    return res.status(500).json({
+  if (addressId === null || addressId === undefined || addressId === '') {
+    return res.status(400).json({
       status: "error",
-      message: "This data is not exist. Please try again!!!",
+      message: "Vui lòng chọn địa chỉ",
     });
   }
   
-  // Find address by MongoDB _id
-  const addressIndex = user.address.findIndex(addr => addr._id.toString() === addressId);
+  const user = await User.findById(userId);
+  
+  if (!user.address || user.address.length === 0) {
+    return res.status(400).json({
+      status: "error",
+      message: "Bạn chưa có địa chỉ nào",
+    });
+  }
+  
+  // Handle both array index (number) and ObjectId (string)
+  let addressIndex = -1;
+  
+  if (typeof addressId === 'number') {
+    // Frontend sent array index directly
+    addressIndex = addressId;
+  } else if (typeof addressId === 'string') {
+    // Frontend sent ObjectId string
+    try {
+      const objectId = new mongoose.Types.ObjectId(addressId);
+      addressIndex = user.address.findIndex(addr => addr._id.equals(objectId));
+    } catch (error) {
+      return res.status(400).json({
+        status: "error",
+        message: "ID địa chỉ không hợp lệ",
+      });
+    }
+  }
   
   if (addressIndex === -1) {
-    return res.status(500).json({
+    return res.status(400).json({
       status: "error",
-      message: "This data is not exist. Please try again!!!",
+      message: "Không tìm thấy địa chỉ",
     });
   }
   
@@ -141,9 +167,7 @@ exports.updateAddress = catchAsync(async (req, res) => {
   // Nếu đặt làm mặc định, set tất cả địa chỉ khác thành false
   if (data.setDefault === true) {
     user.address.forEach((addr, index) => {
-      if (index !== addressIndex) {
-        addr.setDefault = false;
-      }
+      addr.setDefault = (index === addressIndex);
     });
   }
   
@@ -156,27 +180,52 @@ exports.updateAddress = catchAsync(async (req, res) => {
   await user.save({ validateBeforeSave: false });
   res.status(200).json({
     status: "success",
-    message: "You have already updated address successfully.",
+    message: "Cập nhật địa chỉ thành công",
   });
 });
 exports.deleteAddress = catchAsync(async (req, res) => {
-  const user = req.user;
-  const addressId = req.body.id; // MongoDB ObjectId
+  const userId = req.user._id;
+  let addressId = req.body.id;
   
-  if (!user.address || user.address.length === 0) {
-    return res.status(500).json({
+  if (addressId === null || addressId === undefined || addressId === '') {
+    return res.status(400).json({
       status: "error",
-      message: "This data is not exist. Please try again!!!",
+      message: "Vui lòng chọn địa chỉ",
     });
   }
   
-  // Find address by MongoDB _id
-  const addressIndex = user.address.findIndex(addr => addr._id.toString() === addressId);
+  const user = await User.findById(userId);
+  
+  if (!user.address || user.address.length === 0) {
+    return res.status(400).json({
+      status: "error",
+      message: "Bạn chưa có địa chỉ nào",
+    });
+  }
+  
+  // Handle both array index (number) and ObjectId (string)
+  let addressIndex = -1;
+  
+  if (typeof addressId === 'number') {
+    // Frontend sent array index directly
+    addressIndex = addressId;
+  } else if (typeof addressId === 'string') {
+    // Frontend sent ObjectId string
+    try {
+      const objectId = new mongoose.Types.ObjectId(addressId);
+      addressIndex = user.address.findIndex(addr => addr._id.equals(objectId));
+    } catch (error) {
+      return res.status(400).json({
+        status: "error",
+        message: "ID địa chỉ không hợp lệ",
+      });
+    }
+  }
   
   if (addressIndex === -1) {
-    return res.status(500).json({
+    return res.status(400).json({
       status: "error",
-      message: "This data is not exist. Please try again!!!",
+      message: "Không tìm thấy địa chỉ",
     });
   }
   
@@ -191,46 +240,81 @@ exports.deleteAddress = catchAsync(async (req, res) => {
   await user.save({ validateBeforeSave: false });
   return res.status(200).json({
     status: "success",
-    message: "Delete address successfully.",
+    message: "Xóa địa chỉ thành công",
     data: user,
   });
 });
 exports.setDefaultAddress = catchAsync(async (req, res) => {
-  const user = req.user;
-  const addressId = req.body.id; // MongoDB ObjectId
+  const userId = req.user._id;
+  let addressId = req.body.id;
+  
+  console.log("[SET DEFAULT ADDRESS] 📝 Request - addressId:", addressId, "type:", typeof addressId);
+  
+  if (addressId === null || addressId === undefined || addressId === '') {
+    return res.status(400).json({
+      status: "error",
+      message: "Vui lòng chọn địa chỉ",
+    });
+  }
+  
+  // Re-fetch user from DB
+  const user = await User.findById(userId);
   
   if (!user.address || user.address.length === 0) {
-    return res.status(500).json({
+    return res.status(400).json({
       status: "error",
-      message: "This data is not exist. Please try again!!!",
+      message: "Bạn chưa có địa chỉ nào",
     });
   }
   
-  // Find address by MongoDB _id
-  const addressIndex = user.address.findIndex(addr => addr._id.toString() === addressId);
+  console.log("[SET DEFAULT ADDRESS] User has", user.address.length, "addresses");
+  
+  // Handle both array index (number) and ObjectId (string)
+  let addressIndex = -1;
+  
+  if (typeof addressId === 'number') {
+    // Frontend sent array index directly
+    console.log("[SET DEFAULT ADDRESS] 📝 Received array index:", addressId);
+    addressIndex = addressId;
+  } else if (typeof addressId === 'string') {
+    // Frontend sent ObjectId string
+    console.log("[SET DEFAULT ADDRESS] 📝 Received ObjectId string:", addressId);
+    try {
+      const objectId = new mongoose.Types.ObjectId(addressId);
+      addressIndex = user.address.findIndex(addr => {
+        const matches = addr._id.equals(objectId);
+        console.log(`Comparing ${addr._id.toString()} equals ${objectId.toString()} ? ${matches}`);
+        return matches;
+      });
+    } catch (error) {
+      console.log("[SET DEFAULT ADDRESS] ❌ Invalid ObjectId format:", addressId);
+      return res.status(400).json({
+        status: "error",
+        message: "ID địa chỉ không hợp lệ",
+      });
+    }
+  }
   
   if (addressIndex === -1) {
-    return res.status(500).json({
+    console.log("[SET DEFAULT ADDRESS] ❌ Address not found");
+    console.log("Available IDs:", user.address.map(a => a._id.toString()));
+    console.log("Looking for:", addressId.toString());
+    return res.status(400).json({
       status: "error",
-      message: "This data is not exist. Please try again!!!",
+      message: "Không tìm thấy địa chỉ",
     });
   }
   
-  // Find current default address
-  const currentDefaultIndex = user.address.findIndex(addr => addr.setDefault === true);
-  
-  // Set new address as default
-  user.address[addressIndex].setDefault = true;
-  
-  // Unset old default address
-  if (currentDefaultIndex !== -1) {
-    user.address[currentDefaultIndex].setDefault = false;
-  }
+  // Reset all to false, then set the selected one to true
+  user.address.forEach((addr, idx) => {
+    addr.setDefault = (idx === addressIndex);
+  });
   
   await user.save({ validateBeforeSave: false });
+  
   return res.status(200).json({
     status: "success",
-    message: "Set default address successfully.",
+    message: "Đặt địa chỉ mặc định thành công",
     data: user,
   });
 });

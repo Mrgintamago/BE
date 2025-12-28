@@ -89,13 +89,21 @@ exports.deleteOne = (Model) =>
 exports.updateOne = (Model) =>
   catchAsync(async (req, res, next) => {
     if (Model == Product) {
+      console.log("[UPDATE PRODUCT] 📝 Request body:", Object.keys(req.body));
+      console.log("[UPDATE PRODUCT] Price:", req.body.price, "Promotion:", req.body.promotion);
+      
       req.body.updatedBy = req.user.id;
       req.body.updatedAt = Date.now() - 1000;
-      req.body.description = req.body.description
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">");
-      if (req.body.promotion >= req.body.price)
-        return next(new AppError("Giá giảm phải nhỏ hơn giá gốc", 500));
+      
+      // Handle description safely - only if provided
+      if (req.body.description) {
+        console.log("[UPDATE PRODUCT] ✅ Processing description");
+        req.body.description = req.body.description
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">");
+      }
+      
+      console.log("[UPDATE PRODUCT] 🔄 Updating document...");
       const doc = await Model.findByIdAndUpdate(req.params.id, req.body, {
         new: true,
         runValidators: false,
@@ -104,6 +112,7 @@ exports.updateOne = (Model) =>
         return next(new AppError("Không tìm thấy dữ liệu với ID này", 404));
       }
 
+      console.log("[UPDATE PRODUCT] ✅ Updated successfully");
       res.status(200).json({
         status: "success",
         data: {

@@ -646,36 +646,47 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
 // Logout endpoint - bỏ qua token expiry check
 exports.logout = async (req, res) => {
   try {
+    console.log("[LOGOUT] 🔄 Logout request received");
     const token = req.headers.authorization?.split(' ')[1];
     
     if (token) {
+      console.log("[LOGOUT] ✅ Token found in header");
       // Decode token KHÔNG verify expiry
       const decoded = jwt.decode(token); // Không dùng verify!
       
       if (decoded) {
+        console.log("[LOGOUT] 📝 Token decoded, adding to blacklist");
         // Thêm token vào blacklist ngay cả khi expired
         await TokenBlacklist.create({
           token: token,
-          expiresAt: new Date(decoded.exp * 1000)
+          expiresAt: new Date(decoded.exp * 1000),
         });
+        console.log("[LOGOUT] ✅ Token added to blacklist");
       }
     }
     
-    // Clear cookie
-    res.clearCookie('refreshToken', {
+    // Clear JWT cookie with exact settings
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/'
-    });
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      path: "/",
+    };
     
-    res.json({
-      status: 'success',
-      message: 'Logged out successfully'
+    res.clearCookie("jwt", cookieOptions);
+    console.log("[LOGOUT] ✅ Cookie cleared");
+    
+    res.status(200).json({
+      status: "success",
+      message: "Đã đăng xuất thành công",
     });
+    console.log("[LOGOUT] ✅ Logout response sent");
   } catch (error) {
-    console.error('Logout error:', error);
-    res.status(500).json({ error: 'Logout failed' });
+    console.error("[LOGOUT] ❌ Error:", error.message);
+    res.status(200).json({
+      status: "success",
+      message: "Đã đăng xuất thành công",
+    });
   }
 };
 

@@ -73,7 +73,16 @@ router
       // Kiểm tra nếu user là admin role hoặc là owner của đơn
       const adminRoles = ["super_admin", "admin", "manager", "sales_staff"];
       const isAdmin = adminRoles.includes(req.user.role);
-      const isOwner = order.user && order.user.toString() === req.user._id.toString();
+      
+      // So sánh user ID - xử lý cả trường hợp order.user là object hoặc ObjectId
+      let orderUserId;
+      if (order.user) {
+        orderUserId = order.user._id ? order.user._id.toString() : order.user.toString();
+      }
+      const currentUserId = req.user._id.toString();
+      const isOwner = orderUserId === currentUserId;
+      
+      console.log(`[PATCH ORDER] Admin: ${isAdmin}, OrderUserId: ${orderUserId}, CurrentUserId: ${currentUserId}, isOwner: ${isOwner}`);
       
       if (!isAdmin && !isOwner) {
         return next(new AppError("Bạn không có quyền cập nhật đơn hàng này", 403));

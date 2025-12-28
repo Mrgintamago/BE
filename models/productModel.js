@@ -20,13 +20,6 @@ const productSchema = new mongoose.Schema(
     },
     promotion: {
       type: Number,
-      validate: {
-        validator: function (val) {
-          // this only points to current doc on NEW document creation
-          return val <= this.price;
-        },
-        message: "Giá giảm: ({VALUE}) phải nhỏ hơn giá gốc",
-      },
     },
     description: String,
     ratingsAverage: {
