@@ -15,13 +15,13 @@ router.post("/forgotPassword", authController.forgotPassword);
 router.patch("/resetPassword/:token", authController.resetPassword);
 router.patch("/changeState", authController.changeStateUser);
 
+// SECURITY: Logout BEFORE protect middleware to allow logout with expired tokens
+router.post("/logout", authController.logout);
+
 // Protect all routes after this middleware
 router.use(authController.protect);
 
 // SPECIFIC ROUTES - must be BEFORE generic /:id routes
-// Logout AFTER protect - ensure we have user context and valid token
-router.post("/logout", authController.logout);
-
 router.patch("/updateMyPassword", authController.updatePassword);
 router.get("/me", userController.getMe, userController.getUser);  
 router.patch("/updateMe", userController.updateMe);
@@ -85,14 +85,14 @@ router
 // Legacy routes (keep for backward compatibility)
 router
   .route("/")
-  .get(authController.restrictTo("super_admin", "admin"), userController.getAllUsers)
+  .get(authController.restrictTo("super_admin", "admin", "manager", "sales_staff"), userController.getAllUsers)
   .post(authController.restrictTo("super_admin"), userController.createUser);
 
 // Generic /:id route - MUST be last to not match specific routes like /logout
 // Use regex to only match valid ObjectIds, not string literals
 router
   .route("/:id(^[0-9a-fA-F]{24}$)")
-  .get(authController.restrictTo("super_admin", "admin"), userController.getUser)
+  .get(authController.restrictTo("super_admin", "admin", "manager", "sales_staff"), userController.getUser)
   .patch(authController.restrictTo("super_admin"), userController.updateUser)
   .delete(authController.restrictTo("super_admin"), userController.deleteUser);
 

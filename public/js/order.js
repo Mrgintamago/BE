@@ -1,12 +1,24 @@
-const loadData = async () => {
+const loadData = async (status = null) => {
   try {
+    const ajaxSettings = {
+      url: "api/v1/orders/getTableOrder",
+    };
+    
+    // Thêm status filter vào query string nếu có
+    if (status) {
+      ajaxSettings.url += `?status=${encodeURIComponent(status)}`;
+    }
+    
+    // Nếu DataTable đã được khởi tạo, destroy nó trước
+    if ($.fn.DataTable.isDataTable("#sample_data")) {
+      $("#sample_data").DataTable().destroy();
+    }
+
     $("#sample_data").DataTable({
       processing: true,
       serverSide: true,
       serverMethod: "get",
-      ajax: {
-        url: "api/v1/orders/getTableOrder",
-      },
+      ajax: ajaxSettings,
       columns: [
         {
           data: "user",
@@ -130,4 +142,21 @@ $(document).ready(function () {
   loadData();
   $(".navbar-nav li").removeClass("active");
   $(".navbar-nav li")[2].className = "nav-item active";
+  
+  // Thêm event listeners cho các tab status
+  document.querySelectorAll('.btn[data-status]').forEach(btn => {
+    btn.addEventListener('click', function() {
+      const status = this.getAttribute('data-status');
+      // Reset button colors
+      document.querySelectorAll('.btn[data-status]').forEach(b => {
+        b.classList.remove('btn-primary');
+        b.classList.add('btn-light');
+      });
+      // Highlight selected button
+      this.classList.remove('btn-light');
+      this.classList.add('btn-primary');
+      // Load data with status filter
+      loadData(status === 'all' ? null : status);
+    });
+  });
 });

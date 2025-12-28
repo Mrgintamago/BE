@@ -181,18 +181,18 @@ $(document).on("click", ".ban", function () {
 $(document).on("click", ".delete-user", function () {
   const id = $(this).data("id");
   if (confirm("Bạn có chắc muốn xóa tài khoản này?")) {
-    try {
-      $.ajax({
-        url: `/api/v1/users/admin-users/${id}`,
-        method: "delete",
-        success: function () {
-          showAlert("success", `Xóa tài khoản thành công`);
-          reloadData();
-        },
-      });
-    } catch (error) {
-      return showAlert("error", error.responseJSON?.message || "Xóa tài khoản thất bại");
-    }
+    $.ajax({
+      url: `/api/v1/users/admin-users/${id}`,
+      method: "delete",
+      success: function () {
+        showAlert("success", `Xóa tài khoản thành công`);
+        reloadData();
+      },
+      error: function (xhr) {
+        const errorMessage = xhr.responseJSON?.message || "Xóa tài khoản thất bại";
+        showAlert("error", errorMessage);
+      }
+    });
   }
 });
 

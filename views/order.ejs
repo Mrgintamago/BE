@@ -1,6 +1,21 @@
 <% layout('base') -%>
 <div class="container">
     <h1 class="my-4 text-center text-primary">Orders</h1>
+    
+    <!-- Status Filter Buttons -->
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="btn-group" role="group" aria-label="Order Status Filter">
+                <button type="button" class="btn btn-primary" data-status="all">Tất cả</button>
+                <button type="button" class="btn btn-light" data-status="Processed">Chờ xác nhận</button>
+                <button type="button" class="btn btn-light" data-status="Waiting Goods">Chờ lấy hàng</button>
+                <button type="button" class="btn btn-light" data-status="Delivery">Chờ giao hàng</button>
+                <button type="button" class="btn btn-light" data-status="Success">Đã giao</button>
+                <button type="button" class="btn btn-light" data-status="Cancelled">Đã hủy</button>
+            </div>
+        </div>
+    </div>
+    
     <div class="card">
         <div class="card-header">
             <div class="row">

@@ -26,49 +26,52 @@ mongoose
 async function createAdminUser() {
   try {
     // Lấy thông tin từ command line arguments hoặc sử dụng giá trị mặc định
-    const email = process.argv[2] || "admin@example.com";
-    const password = process.argv[3] || "admin123456";
-    const name = process.argv[4] || "Admin User";
+    const email = process.argv[2] || "superadmin@example.com";
+    const password = process.argv[3] || "SuperAdmin123!";
+    const name = process.argv[4] || "Super Admin";
+    const role = process.argv[5] || "super_admin"; // Mặc định là super_admin
 
     // Kiểm tra xem email đã tồn tại chưa
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      if (existingUser.role === "admin") {
-        console.log(`\n⚠️  Email ${email} đã tồn tại và đã là admin!`);
+      if (existingUser.role === role) {
+        console.log(`\n⚠️  Email ${email} đã tồn tại và đã có role ${role}!`);
         process.exit(0);
       } else {
-        // Cập nhật role thành admin
-        existingUser.role = "admin";
+        // Cập nhật role
+        existingUser.role = role;
         existingUser.active = "active";
         existingUser.password = password;
         existingUser.passwordConfirm = password;
         await existingUser.save();
-        console.log(`\n✅ Đã cập nhật user ${email} thành admin!`);
+        console.log(`\n✅ Đã cập nhật user ${email} có role ${role}!`);
         console.log(`   Email: ${email}`);
         console.log(`   Password: ${password}`);
+        console.log(`   Role: ${role}`);
         process.exit(0);
       }
     }
 
-    // Tạo admin user mới
+    // Tạo admin/super_admin user mới
     const adminUser = await User.create({
       name,
       email,
       password,
       passwordConfirm: password,
-      role: "admin",
+      role,
       active: "active",
     });
 
-    console.log("\n✅ Đã tạo admin user thành công!");
+    console.log("\n✅ Đã tạo user thành công!");
     console.log(`   Email: ${email}`);
     console.log(`   Password: ${password}`);
     console.log(`   Name: ${name}`);
+    console.log(`   Role: ${role}`);
     console.log(`\n💡 Bạn có thể đăng nhập với thông tin trên tại trang admin.`);
 
     process.exit(0);
   } catch (error) {
-    console.error("\n❌ Lỗi khi tạo admin user:", error.message);
+    console.error("\n❌ Lỗi khi tạo user:", error.message);
     if (error.errors) {
       Object.keys(error.errors).forEach((key) => {
         console.error(`   - ${key}: ${error.errors[key].message}`);

@@ -36,6 +36,27 @@ function handleQuery(req, value) {
 
 exports.deleteOne = (Model) =>
   catchAsync(async (req, res, next) => {
+    // SECURITY: Prevent deleting the last super_admin user
+    if (Model.modelName === "User") {
+      const User = require("../models/userModel");
+      const userToDelete = await User.findById(req.params.id);
+      
+      if (userToDelete) {
+        // SECURITY: Prevent super_admin from deleting themselves
+        if (userToDelete._id.toString() === req.user._id.toString()) {
+          return next(new AppError("Không thể tự xóa chính mình! Vui lòng yêu cầu admin khác xóa tài khoản của bạn.", 403));
+        }
+        
+        // SECURITY: Prevent deleting the last super_admin user
+        if (userToDelete.role === "super_admin") {
+          const superAdminCount = await User.countDocuments({ role: "super_admin" });
+          if (superAdminCount === 1) {
+            return next(new AppError("Không thể xóa super_admin duy nhất. Phải có ít nhất 1 super_admin!", 403));
+          }
+        }
+      }
+    }
+    
     if (Model == Import) {
       const invoice = await Model.findById(req.params.id);
       // Sử dụng for...of thay vì forEach với async để đảm bảo chờ đợi đúng cách
@@ -460,6 +481,11 @@ exports.getTable = (Model) =>
       
       // Filter đặc biệt cho User model
       if (Model == User) filter["role"] = { $ne: "admin" };
+      
+      // Filter theo status cho Order model
+      if (Model == Order && req.query.status) {
+        filter["status"] = req.query.status;
+      }
 
       const recordsTotal = await Model.countDocuments({});
       const recordsFiltered = await Model.countDocuments(filter);

@@ -126,6 +126,12 @@ const createSendToken = async (user, statusCode, res) => {
 
   // Remove password from output
   user.password = undefined;
+  
+  console.log(`[CREATE_SEND_TOKEN] User role before send:`, {
+    email: user.email,
+    role: user.role,
+    roleType: typeof user.role
+  });
 
   // Create Stream Chat token if credentials are available
   let tokenStream = null;
@@ -441,6 +447,13 @@ exports.protect = catchAsync(async (req, res, next) => {
   if (!currentUser) {
     return next(new AppError("Token người dùng không còn tồn tại.", 401));
   }
+  
+  console.log(`[PROTECT] ✅ User loaded:`, {
+    id: currentUser._id,
+    email: currentUser.email,
+    role: currentUser.role,
+    roleType: typeof currentUser.role
+  });
 
   // 3.5) Check if user is banned
   if (currentUser.active == "ban") {
@@ -504,10 +517,19 @@ exports.isLoggedIn = async (req, res, next) => {
 exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     // roles ['admin', 'employee',[user]]. role='user'
-    if (req.user == undefined || !roles.includes(req.user.role)) {
-      console.log(`[AUTH] Access Denied - User role: ${req.user?.role || 'undefined'}, Required: ${roles.join(', ')}`);
+    const userRole = req.user?.role;
+    const rolesString = roles.join(', ');
+    
+    console.log(`[RESTRICT_TO] User role: '${userRole}' (type: ${typeof userRole}), Required: [${rolesString}]`);
+    console.log(`[RESTRICT_TO] User object keys:`, Object.keys(req.user || {}));
+    console.log(`[RESTRICT_TO] Role check: ${userRole} in [${rolesString}]? ${roles.includes(userRole)}`);
+    
+    if (req.user == undefined || !roles.includes(userRole)) {
+      console.log(`[AUTH] ❌ Access Denied - User role: ${userRole || 'undefined'}, Required: ${rolesString}`);
       return next(new AppError("Bạn không có quyền thực hiện", 403));
     }
+    
+    console.log(`[AUTH] ✅ Access Granted - User role: ${userRole}`);
     next();
   };
 };
@@ -661,12 +683,27 @@ exports.logout = async (req, res) => {
       }
     }
     
-    // Clear cookie
-    res.clearCookie('refreshToken', {
+    // Clear cookies with EXACT same settings as when they were set
+    const cookieOptions = {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      path: '/'
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+      path: "/",
+    };
+    
+    // Clear refreshToken cookie
+    res.clearCookie('refreshToken', cookieOptions);
+    
+    // Clear jwt cookie (access token)
+    res.clearCookie('jwt', cookieOptions);
+    
+    // Clear any other auth cookies with same path
+    res.clearCookie('token', cookieOptions);
+    
+    console.log("✅ Cookies cleared:", { 
+      secure: cookieOptions.secure, 
+      sameSite: cookieOptions.sameSite,
+      path: cookieOptions.path 
     });
     
     res.json({
@@ -675,7 +712,22 @@ exports.logout = async (req, res) => {
     });
   } catch (error) {
     console.error('Logout error:', error);
-    res.status(500).json({ error: 'Logout failed' });
+    // Even on error, attempt to clear cookies
+    const cookieOptions = {
+      path: "/",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+    };
+    
+    res.clearCookie('refreshToken', cookieOptions);
+    res.clearCookie('jwt', cookieOptions);
+    res.clearCookie('token', cookieOptions);
+    
+    res.status(200).json({
+      status: 'success',
+      message: 'Logged out'
+    });
   }
 };
 
