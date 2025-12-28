@@ -315,7 +315,17 @@ exports.login = catchAsync(async (req, res, next) => {
   // SECURITY: Check if account is locked
   if (user && user.isAccountLocked()) {
     console.warn(`⚠️ Login attempt on locked account: ${email}`);
-    return next(new AppError("Tài khoản bị khóa do quá nhiều lần nhập sai. Vui lòng thử lại sau 15 phút.", 429));
+    const lockUntilTime = new Date(user.lockUntil);
+    const lockUntilMinutes = Math.ceil((lockUntilTime - Date.now()) / (60 * 1000));
+    
+    const error = new AppError(
+      `Tài khoản bị khóa do đăng nhập sai 5 lần. Vui lòng thử lại sau ${lockUntilMinutes} phút.`,
+      401
+    );
+    error.code = "ACCOUNT_LOCKED";
+    error.lockUntilMinutes = lockUntilMinutes;
+    error.lockUntil = lockUntilTime;
+    return next(error);
   }
 
   if (
@@ -326,8 +336,30 @@ exports.login = catchAsync(async (req, res, next) => {
     if (user) {
       await user.incLoginAttempts();
       const remainingAttempts = 5 - user.loginAttempts;
-      if (remainingAttempts > 0) {
+      
+      // If account just got locked (5th attempt)
+      if (user.isAccountLocked()) {
+        console.warn(`⚠️ Account locked after 5 failed attempts: ${email}`);
+        const lockUntilTime = new Date(user.lockUntil);
+        const lockUntilMinutes = Math.ceil((lockUntilTime - Date.now()) / (60 * 1000));
+        
+        const error = new AppError(
+          `Tài khoản bị khóa do đăng nhập sai 5 lần. Vui lòng thử lại sau ${lockUntilMinutes} phút.`,
+          401
+        );
+        error.code = "ACCOUNT_LOCKED";
+        error.lockUntilMinutes = lockUntilMinutes;
+        error.lockUntil = lockUntilTime;
+        return next(error);
+      } else if (remainingAttempts > 0) {
         console.warn(`⚠️ Login failed for ${email}. Remaining attempts: ${remainingAttempts}`);
+        const error = new AppError(
+          `Mật khẩu không chính xác. Bạn còn ${remainingAttempts} lần thử.`,
+          401
+        );
+        error.code = "INVALID_PASSWORD";
+        error.remainingAttempts = remainingAttempts;
+        return next(error);
       }
     }
     return next(new AppError("Email hoặc mật khẩu không chính xác", 401));
@@ -611,66 +643,41 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   createSendToken(user, 200, res);
 });
 
-exports.logout = catchAsync(async (req, res, next) => {
+// Logout endpoint - bỏ qua token expiry check
+exports.logout = async (req, res) => {
   try {
-    // SECURITY: Prevent caching of logout response
-    res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate, max-age=0");
-    res.setHeader("Pragma", "no-cache");
-    res.setHeader("Expires", "0");
+    const token = req.headers.authorization?.split(' ')[1];
     
-    // Extract JWT from cookies or Authorization header
-    let token;
-    if (req.cookies && req.cookies.jwt) {
-      token = req.cookies.jwt;
-    } else if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
-      token = req.headers.authorization.split(" ")[1];
-    }
-
-    // If token exists, add it to blacklist
     if (token) {
-      try {
-        // Decode token to get expiration time
-        const decoded = jwt.decode(token);
-        if (decoded && decoded.exp) {
-          // Blacklist the token
-          await TokenBlacklist.blacklistToken(
-            token,
-            req.user ? req.user.id : null,
-            new Date(decoded.exp * 1000),
-            "USER_LOGOUT",
-            req.ip,
-            req.get("user-agent")
-          );
-        }
-      } catch (err) {
-        // Token decode error - continue with logout
-        console.error("Error decoding token for blacklist:", err.message);
+      // Decode token KHÔNG verify expiry
+      const decoded = jwt.decode(token); // Không dùng verify!
+      
+      if (decoded) {
+        // Thêm token vào blacklist ngay cả khi expired
+        await TokenBlacklist.create({
+          token: token,
+          expiresAt: new Date(decoded.exp * 1000)
+        });
       }
     }
-
-    // SECURITY: Clear both access and refresh tokens by deleting cookies
-    res.clearCookie("jwt", { path: "/" });
-    res.clearCookie("refreshToken", { path: "/" });
-
-    // Always return JSON (let client handle redirect)
-    // This prevents browser caching of redirect responses
-    res.status(200).json({ 
-      status: "success", 
-      message: "Logged out successfully",
-      redirect: "/login"
-    });
-  } catch (err) {
-    // Even if blacklist fails, complete logout - clear cookies
-    res.clearCookie("jwt", { path: "/" });
-    res.clearCookie("refreshToken", { path: "/" });
     
-    res.status(200).json({ 
-      status: "success", 
-      message: "Logged out successfully",
-      redirect: "/login"
+    // Clear cookie
+    res.clearCookie('refreshToken', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/'
     });
+    
+    res.json({
+      status: 'success',
+      message: 'Logged out successfully'
+    });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ error: 'Logout failed' });
   }
-});
+};
 
 exports.googleLogin = catchAsync(async (req, res) => {
   const email = req.body.email;

@@ -40,10 +40,18 @@ const sendErrorDev = (err, res) => {
 const sendErrorProd = (err, res) => {
   // Operational, trusted error: send message to client
   if (err.isOperational) {
-    res.status(err.statusCode).json({
+    const errorResponse = {
       status: err.status,
       message: err.message
-    });
+    };
+    
+    // Include additional fields for login error handling
+    if (err.code) errorResponse.code = err.code;
+    if (err.remainingAttempts !== undefined) errorResponse.remainingAttempts = err.remainingAttempts;
+    if (err.lockUntilMinutes !== undefined) errorResponse.lockUntilMinutes = err.lockUntilMinutes;
+    if (err.lockUntil) errorResponse.lockUntil = err.lockUntil;
+    
+    res.status(err.statusCode).json(errorResponse);
 
     // Programming or other unknown error: don't leak error details
   } else {
