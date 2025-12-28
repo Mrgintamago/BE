@@ -21,9 +21,20 @@ $("#logout").click(function () {
 function logout() {
   $.ajax({
     url: "/api/v1/users/logout",
-    method: "GET",
-    success: () => {
+    method: "POST",  // ✅ Must be POST (protected endpoint)
+    success: (data) => {
+      // Clear session/cookies immediately
+      document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      // Redirect to login
       window.location = "/login";
     },
+    error: (error) => {
+      console.error("Logout error:", error);
+      // Even if API fails, clear cookies and redirect
+      document.cookie = "jwt=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "refreshToken=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      window.location = "/login";
+    }
   });
 }
