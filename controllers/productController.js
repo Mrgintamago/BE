@@ -10,14 +10,27 @@ const uploadFiles = upload.fields([{ name: "images", maxCount: 5 }]);
 exports.uploadProductImages = (req, res, next) => {
   uploadFiles(req, res, (err) => {
     if (err instanceof multer.MulterError) {
+      console.error("📁 Multer Error:", err.code, err.message);
       if (err.code === "LIMIT_UNEXPECTED_FILE") {
         return next(
           new AppError("Vượt quá số lượng file quy định.", 400),
           false
         );
       }
+      if (err.code === "LIMIT_FILE_SIZE") {
+        return next(
+          new AppError("File quá lớn. Tối đa 5MB/file.", 400),
+          false
+        );
+      }
+      return next(
+        new AppError(`Multer Error: ${err.message}`, 400),
+        false
+      );
     } else if (err) {
-      return next(new AppError("Upload thất bại.", 400), false);
+      console.error("📁 Upload Error (non-Multer):", err.message);
+      console.error(err);
+      return next(new AppError(`Upload thất bại: ${err.message}`, 400), false);
     }
     if (req.body.promotion == "") req.body.promotion = req.body.price;
     next();
@@ -26,6 +39,10 @@ exports.uploadProductImages = (req, res, next) => {
 
 exports.resizeProductImages = catchAsync(async (req, res, next) => {
   if (req.files === undefined || !req.files.images) return next();
+  
+  console.log("📤 Uploading images to Cloudinary...");
+  console.log("Request body:", JSON.stringify(req.body));
+  console.log("Files:", req.files.images.map(f => ({ name: f.originalname, size: f.size })));
   
   // Check if Cloudinary is configured
   const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
@@ -36,6 +53,7 @@ exports.resizeProductImages = catchAsync(async (req, res, next) => {
       cloud_name === "your_cloud_name" || 
       api_key === "your_api_key" || 
       api_secret === "your_api_secret") {
+    console.error("❌ Cloudinary not configured");
     return next(
       new AppError(
         "Cloudinary chưa được cấu hình. Vui lòng cập nhật CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, và CLOUDINARY_API_SECRET trong file config.env",
@@ -48,16 +66,36 @@ exports.resizeProductImages = catchAsync(async (req, res, next) => {
   // Upload images in parallel for better performance
   try {
     const uploadPromises = req.files.images.map(async (file) => {
-      const result = await cloudinary.uploader.upload(file.path, {
-        folder: 'products',
-        quality: 'auto',
-        fetch_format: 'auto',
+      console.log(`📸 Uploading file: ${file.originalname} (${file.size} bytes)`);
+      
+      // Upload buffer directly to Cloudinary (for serverless functions)
+      return new Promise((resolve, reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+          {
+            folder: 'products',
+            quality: 'auto',
+            fetch_format: 'auto',
+            resource_type: 'auto'
+          },
+          (error, result) => {
+            if (error) {
+              console.error(`❌ Upload failed for ${file.originalname}:`, error.message);
+              reject(error);
+            } else {
+              console.log(`✅ File uploaded: ${result.url}`);
+              resolve(result.url);
+            }
+          }
+        );
+        stream.end(file.buffer);
       });
-      return result.url;
     });
     
     req.body.images = await Promise.all(uploadPromises);
+    console.log(`✅ All ${req.body.images.length} images uploaded successfully`);
   } catch (error) {
+    console.error(`❌ Cloudinary upload error: ${error.message}`);
+    console.error(error);
     return next(
       new AppError(
         `Lỗi khi upload ảnh lên Cloudinary: ${error.message}`,

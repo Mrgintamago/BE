@@ -2,16 +2,9 @@ const multer = require("multer");
 const path = require("path");
 
 // SECURITY: File upload validation
+// Use memory storage for Vercel serverless functions (no persistent filesystem)
 module.exports = multer({
-  storage: multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, 'uploads/'); // Thư mục lưu file tạm
-    },
-    filename: function (req, file, cb) {
-      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-      cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-  }),
+  storage: multer.memoryStorage(),
   fileFilter: (req, file, cb) => {
     // SECURITY: MIME type validation
     const allowedMimes = [
