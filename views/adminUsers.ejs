@@ -1,0 +1,151 @@
+<% layout('base') -%>
+    <div class="container">
+        <h1 class="my-4 text-center text-primary">Quản lý Admin Users</h1>
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col col-sm-9 text-dark">
+                        <h4><strong>Danh sách Admin Users</strong></h4>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="sample_data">
+
+                        <thead>
+                            <tr>
+                                <th>Avatar</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+                <div class="modal" id="action_modal">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="post" id="sample_form" enctype="multipart/form-data">
+                    <div class="modal-header" id="dynamic_modal_title">
+                        <h5 class="modal-title"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <!-- View Mode -->
+                        <div class="mb-2 edit-show">
+                            <label class="form-label fw-bold">Name</label>
+                            <p class="mb-0" id="view_name">-</p>
+                        </div>
+                        <div class="mb-2 edit-show">
+                            <label class="form-label fw-bold">Email</label>
+                            <p class="mb-0" id="view_email">-</p>
+                        </div>
+                        <div class="mb-2 edit-show">
+                            <label class="form-label fw-bold">Phone</label>
+                            <p class="mb-0" id="view_phone">-</p>
+                        </div>
+                        <div class="mb-2 edit-show">
+                            <label class="form-label fw-bold">Status</label>
+                            <p class="mb-0" id="view_active">-</p>
+                        </div>
+                        <div class="mb-2 edit-show">
+                            <label class="form-label fw-bold">Role</label>
+                            <p class="mb-0" id="view_role">-</p>
+                        </div>
+                        <div class="mb-2 edit-show">
+                            <label class="form-label fw-bold">Giới tính</label>
+                            <p class="mb-0" id="view_gender">-</p>
+                        </div>
+                        <div class="mb-2 edit-show">
+                            <label class="form-label fw-bold">Ngày sinh</label>
+                            <p class="mb-0" id="view_dob">-</p>
+                        </div>
+                        <div class="mb-2 edit-show">
+                            <label class="form-label fw-bold">Ngày tạo</label>
+                            <p class="mb-0" id="view_createdAt">-</p>
+                        </div>
+                        
+                        <!-- Edit Mode (Super Admin only) -->
+                        <div class="edit-form d-none">
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Name <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="edit_name" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Email <span class="text-danger">*</span></label>
+                                <input type="email" class="form-control" id="edit_email" required>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Phone</label>
+                                <input type="text" class="form-control" id="edit_phone">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Status</label>
+                                <select class="form-select" id="edit_active">
+                                    <option value="active">Active</option>
+                                    <option value="verify">Verify</option>
+                                    <option value="ban">Ban</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Role</label>
+                                <select class="form-select" id="edit_role">
+                                    <option value="super_admin">Super Admin</option>
+                                    <option value="admin">Admin</option>
+                                    <option value="manager">Manager</option>
+                                    <option value="sales_staff">Sales Staff</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Giới tính</label>
+                                <select class="form-select" id="edit_gender">
+                                    <option value="">-- Chọn --</option>
+                                    <option value="Nam">Nam</option>
+                                    <option value="Nữ">Nữ</option>
+                                    <option value="Khác">Khác</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Ngày sinh</label>
+                                <input type="date" class="form-control" id="edit_dob">
+                            </div>
+                            <hr class="my-4">
+                            <h6 class="fw-bold mb-3">Đổi mật khẩu (để trống nếu không muốn đổi)</h6>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Mật khẩu mới</label>
+                                <input type="password" class="form-control" id="edit_password" minlength="8">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-bold">Xác nhận mật khẩu</label>
+                                <input type="password" class="form-control" id="edit_passwordConfirm" minlength="8">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <input type="hidden" name="id" id="id" />
+                        <input type="hidden" name="action" id="action" value="View" />
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="button" class="btn btn-warning d-none" id="edit_button">Edit</button>
+                        <button type="submit" class="btn btn-primary d-none" id="action_button">Save</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        const currentUserRole = '<%= typeof user !== "undefined" ? user.role : "" %>';
+        const userType = 'admin'; // Đánh dấu đây là trang admin users
+    </script>
+    <script src="/js/adminUsers.js"></script>
+

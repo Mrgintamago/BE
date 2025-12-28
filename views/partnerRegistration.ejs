@@ -1,0 +1,127 @@
+<% layout('base') -%>
+<style>
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .status-pending {
+        background: #ffc107;
+        color: #000;
+    }
+    .status-contacted {
+        background: #17a2b8;
+        color: white;
+    }
+    .status-approved {
+        background: #28a745;
+        color: white;
+    }
+    .status-rejected {
+        background: #dc3545;
+        color: white;
+    }
+</style>
+
+<div class="container">
+    <h1 class="my-4 text-center text-primary">Quản lý Đăng ký Đối tác</h1>
+    <div class="card">
+        <div class="card-header">
+            <div class="row">
+                <div class="col col-sm-9 text-dark">
+                    <h4><strong>Danh sách đăng ký đối tác</strong></h4>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="sample_data">
+                    <thead>
+                        <tr>
+                            <th>Tên công ty</th>
+                            <th>Người liên hệ</th>
+                            <th>Email</th>
+                            <th>Số điện thoại</th>
+                            <th>Loại hình</th>
+                            <th>Trạng thái</th>
+                            <th>Ngày đăng ký</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal xem/chỉnh sửa -->
+<div class="modal" id="action_modal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form method="post" id="sample_form">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dynamic_modal_title">Chi tiết đăng ký đối tác</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" id="action" value="Edit">
+                    <input type="hidden" name="id" id="id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tên công ty:</label>
+                        <p id="view_companyName" class="mb-0"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Người liên hệ:</label>
+                        <p id="view_contactPerson" class="mb-0"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Email:</label>
+                        <p id="view_email" class="mb-0"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Số điện thoại:</label>
+                        <p id="view_phone" class="mb-0"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Địa chỉ:</label>
+                        <p id="view_address" class="mb-0"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Loại hình kinh doanh:</label>
+                        <p id="view_businessType" class="mb-0"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Thông tin bổ sung:</label>
+                        <p id="view_message" class="mb-0"></p>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Trạng thái:</label>
+                        <select name="status" id="edit_status" class="form-select">
+                            <option value="pending">Chờ xử lý</option>
+                            <option value="contacted">Đã liên hệ</option>
+                            <option value="rejected">Từ chối</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Ghi chú:</label>
+                        <textarea name="notes" id="edit_notes" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="submit" class="btn btn-primary" id="action_button">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const currentUserRole = '<%= typeof user !== "undefined" ? user.role : "" %>';
+</script>
+<script src="/js/partnerRegistration.js"></script>
+

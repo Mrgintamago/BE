@@ -1,0 +1,92 @@
+<% layout('base') -%>
+<style>
+    .comment-content {
+        max-width: 500px;
+        word-wrap: break-word;
+    }
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .status-pending {
+        background: #ffc107;
+        color: #000;
+    }
+</style>
+
+<div class="container">
+    <h1 class="my-4 text-center text-primary">Quản lý Hỏi và đáp</h1>
+    <div class="card">
+        <div class="card-header">
+            <div class="row">
+                <div class="col col-sm-9 text-dark">
+                    <h4><strong>Danh sách câu hỏi và trả lời</strong></h4>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover" id="sample_data">
+                    <thead>
+                        <tr>
+                            <th>Người dùng</th>
+                            <th>Sản phẩm</th>
+                            <th>Nội dung</th>
+                            <th>Lượt thích</th>
+                            <th>Ngày tạo</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal xem chi tiết -->
+<div class="modal" id="action_modal">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="dynamic_modal_title">Chi tiết câu hỏi/trả lời</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Người dùng:</label>
+                    <p id="view_user" class="mb-0"></p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Sản phẩm:</label>
+                    <p id="view_product" class="mb-0"></p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nội dung:</label>
+                    <p id="view_comment" class="mb-0 comment-content"></p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Lượt thích:</label>
+                    <p id="view_likes" class="mb-0"></p>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Ngày tạo:</label>
+                    <p id="view_createdAt" class="mb-0"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" class="btn btn-danger" id="delete_btn">Xóa</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const currentUserRole = '<%= typeof user !== "undefined" ? user.role : "" %>';
+</script>
+<script src="/js/comment.js"></script>
+

@@ -1,0 +1,113 @@
+const express = require("express");
+const userController = require("./../controllers/userController");
+const authController = require("./../controllers/authController");
+
+const router = express.Router();
+router.post("/googleLogin", authController.googleLogin);
+router.post("/userLoginWith", authController.userLoginWith);
+router.post("/signup", authController.signup);
+router.post("/login", authController.login);
+router.post("/verifyResetPass", authController.verifyResetPass);
+router.get("/logout", authController.logout);
+// SECURITY: Refresh token endpoint (before protect middleware)
+router.post("/refreshToken", authController.refreshAccessToken);
+router.post("/forgotPassword", authController.forgotPassword);
+router.patch("/resetPassword/:token", authController.resetPassword);
+router.patch("/changeState", authController.changeStateUser);
+router.post("/verify", authController.verifyUser);
+
+// Protect all routes after this middleware
+router.use(authController.protect);
+
+router.post("/resendVerifyCode", authController.resendVerifyCode);
+
+router.patch("/updateMyPassword", authController.updatePassword);
+router.get("/me", userController.getMe, userController.getUser);  
+router.patch("/updateMe", userController.updateMe);
+router.delete("/deleteMe", userController.deleteMe);
+router.get("/me/address", userController.getUserAddress);  
+router.patch("/createAddress", userController.createAddress);
+router.patch("/updateAddress", userController.updateAddress);
+router.patch("/setDefaultAddress", userController.setDefaultAddress);
+router.patch("/deleteAddress", userController.deleteAddress);
+
+// Super Admin: Full access to users (manage roles)
+// Admin: View only
+// Manager, Sales Staff: No access
+router.route("/getTableUser").get(
+  authController.restrictTo("super_admin", "admin"),
+  userController.getTableUser
+);
+
+// Get table for admin users (super_admin, admin, manager, sales_staff)
+// Only Super Admin can view and edit
+router.route("/getTableAdminUsers").get(
+  authController.restrictTo("super_admin"),
+  userController.getTableAdminUsers
+);
+
+// Get table for customer users (user, employee)
+// Super Admin and Admin can view, only Super Admin can edit
+router.route("/getTableCustomerUsers").get(
+  authController.restrictTo("super_admin", "admin"),
+  userController.getTableCustomerUsers
+);
+// Routes for admin users (super_admin, admin, manager, sales_staff)
+// Only Super Admin can view and edit
+router
+  .route("/admin-users")
+  .get(authController.restrictTo("super_admin"), userController.getAllAdminUsers);
+
+router
+  .route("/admin-users/:id")
+  .get(authController.restrictTo("super_admin"), userController.getUser)
+  .patch(authController.restrictTo("super_admin"), userController.updateUser)
+  .delete(authController.restrictTo("super_admin"), userController.deleteUser);
+
+router
+  .route("/admin-users/:id/updatePassword")
+  .patch(
+    authController.restrictTo("super_admin"),
+    userController.updateUserPassword
+  );
+
+// Routes for customer users (user, employee)
+// Super Admin and Admin can view, only Super Admin can edit
+router
+  .route("/customer-users")
+  .get(authController.restrictTo("super_admin", "admin"), userController.getAllCustomerUsers);
+
+router
+  .route("/customer-users/:id")
+  .get(authController.restrictTo("super_admin", "admin"), userController.getUser)
+  .patch(authController.restrictTo("super_admin"), userController.updateUser)
+  .delete(authController.restrictTo("super_admin"), userController.deleteUser);
+
+router
+  .route("/customer-users/:id/updatePassword")
+  .patch(
+    authController.restrictTo("super_admin"),
+    userController.updateUserPassword
+  );
+
+// Legacy routes (keep for backward compatibility)
+router
+  .route("/")
+  .get(authController.restrictTo("super_admin", "admin"), userController.getAllUsers)
+  .post(authController.restrictTo("super_admin"), userController.createUser);
+
+router
+  .route("/:id")
+  .get(authController.restrictTo("super_admin", "admin"), userController.getUser)
+  .patch(authController.restrictTo("super_admin"), userController.updateUser)
+  .delete(authController.restrictTo("super_admin"), userController.deleteUser);
+
+// Route to update user password (Super Admin only)
+router
+  .route("/:id/updatePassword")
+  .patch(
+    authController.restrictTo("super_admin"),
+    userController.updateUserPassword
+  );
+
+module.exports = router;

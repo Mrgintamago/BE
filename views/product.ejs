@@ -1,0 +1,217 @@
+<% layout('base') -%>
+
+    <div class="container">
+        <h1 class="my-4 text-center text-primary">Manage Product</h1>
+
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="col col-sm-9 text-dark">
+                        <h4><strong>Product</strong></h4>
+                    </div>
+                    <% const canManageProducts = typeof user !== "undefined" && (user.role === "super_admin" || user.role === "admin"); %>
+                    <% if (canManageProducts) { %>
+                    <div class="col col-sm-3">
+                        <button type="button" id="add_data" class="btn btn-success btn-sm float-end">Add</button>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+            <!-- Bộ lọc và tìm kiếm -->
+            <div class="card-body border-bottom">
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Tìm kiếm</label>
+                        <input type="text" id="search_input" class="form-control" placeholder="Tìm theo tên sản phẩm...">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Danh mục</label>
+                        <select id="filter_category" class="form-select">
+                            <option value="">Tất cả</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Thương hiệu</label>
+                        <select id="filter_brand" class="form-select">
+                            <option value="">Tất cả</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Loại sản phẩm</label>
+                        <select id="filter_productType" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option value="in-stock">Hàng có sẵn</option>
+                            <option value="pre-order">Pre-order</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Tồn kho</label>
+                        <select id="filter_inventory" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option value="in-stock">Còn hàng</option>
+                            <option value="out-of-stock">Hết hàng</option>
+                            <option value="low-stock">Sắp hết</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-flex align-items-end">
+                        <button type="button" id="reset_filters" class="btn btn-secondary btn-sm w-100">Reset</button>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Giá từ (VND)</label>
+                        <input type="number" id="filter_price_min" class="form-control" placeholder="Min">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label fw-bold">Giá đến (VND)</label>
+                        <input type="number" id="filter_price_max" class="form-control" placeholder="Max">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label fw-bold">Giảm giá</label>
+                        <select id="filter_discount" class="form-select">
+                            <option value="">Tất cả</option>
+                            <option value="has-discount">Có giảm giá</option>
+                            <option value="no-discount">Không giảm giá</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover" id="sample_data">
+                        <thead>
+                            <tr>
+                                <th>Image</th>
+                                <th>Name</th>
+                                <th>Price</th>
+                                <th>Inventory</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    <div class="modal" id="action_modal">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <form method="post" id="sample_form" enctype="multipart/form-data">
+                    <div class="modal-header" id="dynamic_modal_title">
+                        <h5 class="modal-title"></h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3 edit-show">
+                            <label class="form-label fw-bold">Tên sản phẩm <span class="text-danger">*</span></label>
+                            <input type="text" name="title" id="title" class="form-control" required />
+                        </div>
+                        <div class="form-row mb-3">
+                            <div class="form-group col-md-4">
+                                <label class="form-label fw-bold">Nhà cung cấp <span class="text-danger">*</span></label>
+                                <select name="category" class="form-control form-select" id="category" required>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label class="form-label fw-bold">Thương hiệu <span class="text-danger">*</span></label>
+                                <select name="brand" class="form-control form-select" id="brand" required>
+                                </select>
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label class="form-label fw-bold">Loại sản phẩm <span class="text-danger">*</span></label>
+                                <select name="productType" class="form-control form-select" id="productType" required>
+                                    <option value="in-stock">Hàng có sẵn</option>
+                                    <option value="pre-order">Pre-order</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row mb-3">
+                            <div class="form-group col-md-12">
+                                <label class="form-label fw-bold">Phân loại hàng (cách nhau bằng dấu phẩy)</label>
+                                <input type="text" name="tags" id="tags" class="form-control" placeholder="Ví dụ: Bản thường, Bản DX, Cọc" />
+                                <small class="form-text text-muted">Để trống nếu không có phân loại (sẽ hiển thị mặc định: Nguyên bản)</small>
+                            </div>
+                        </div>
+                        <div class="form-row mb-3">
+                            <div class="form-group col-md-3">
+                                <label class="form-label fw-bold">Số lượng <span class="text-danger">*</span></label>
+                                <input type="number" name="inventory" id="inventory" class="form-control" min="0" value="0" required />
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label class="form-label fw-bold">Giá (VND) <span class="text-danger">*</span></label>
+                                <input type="text" name="price" id="price" class="form-control" placeholder="Ví dụ: 1.000.000" required />
+                                <small class="form-text text-muted">Nhập số, hệ thống sẽ tự động định dạng</small>
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label class="form-label fw-bold">Mã giảm giá (%)</label>
+                                <input type="number" name="discountPercent" id="discountPercent" class="form-control" min="0" max="100" step="0.1" placeholder="Nhập % giảm (0-100)" />
+                                <small class="form-text text-muted">Tối đa 100%</small>
+                            </div>
+                            <div class="form-group col-md-3">
+                                <label class="form-label fw-bold">Release Date</label>
+                                <input type="text" name="releaseDate" id="releaseDate" class="form-control" placeholder="2024-03" />
+                            </div>
+                        </div>
+                        <div class="form-row mb-3">
+                            <div class="form-group col-md-4">
+                                <label class="form-label fw-bold">Kích thước H (cm)</label>
+                                <input type="number" step="0.1" name="height" id="height" class="form-control" placeholder="Chiều cao" />
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label class="form-label fw-bold">Kích thước W (cm)</label>
+                                <input type="number" step="0.1" name="width" id="width" class="form-control" placeholder="Chiều rộng" />
+                            </div>
+                            <div class="form-group col-md-4">
+                                <label class="form-label fw-bold">Kích thước D (cm)</label>
+                                <input type="number" step="0.1" name="depth" id="depth" class="form-control" placeholder="Chiều sâu" />
+                            </div>
+                        </div>
+                        <div class="form-row mb-3">
+                            <div class="form-group col-md-12">
+                                <label class="form-label fw-bold">Chất liệu</label>
+                                <input type="text" name="material" id="material" class="form-control" placeholder="PVC, ABS, etc." />
+                            </div>
+                        </div>
+                        <div class="mb-3 edit-show">
+                            <label class="form-label fw-bold">Ghi chú sản phẩm</label>
+                            <textarea name="description" id="description" placeholder="Nhập mô tả chi tiết về sản phẩm..." class="form-control"
+                                rows="10"></textarea>
+                        </div>
+                        <div class="mb-2 img-all edit-show">
+                            <div class="form-group">
+                                <div class="img-cover">
+                                    <div class="drag-area">
+                                        <span class="visible">
+                                            Drag & drop image here or
+                                            <span class="select" role="button">Browse</span>
+                                        </span>
+                                        <span class="on-drop">Drop images here</span>
+                                        <input name="images" type="file" class="images" multiple />
+                                    </div>
+
+                                    <!-- IMAGE PREVIEW CONTAINER -->
+                                    <div class="img-show"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <input type="hidden" name="id" id="id" />
+                        <input type="hidden" name="action" id="action" value="Add" />
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary" id="action_button">Add</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <script>
+        const currentUserRole = '<%= typeof user !== "undefined" ? user.role : "" %>';
+    </script>
+    <script src="/js/product.js"></script>
+    <script src="/js/upload.js"></script>

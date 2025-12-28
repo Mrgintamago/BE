@@ -1,0 +1,415 @@
+<% layout('base') -%>
+<style>
+    .news-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .page-header {
+        margin-bottom: 30px;
+        padding-bottom: 20px;
+        border-bottom: 2px solid #f0f2f5;
+    }
+    .page-header h1 {
+        color: #0a66c2;
+        font-weight: 700;
+        font-size: 28px;
+        margin: 0;
+    }
+    .news-post-container {
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        margin-bottom: 30px;
+        overflow: hidden;
+        border: 1px solid #e4e6eb;
+    }
+    .news-post-header {
+        padding: 16px 20px;
+        border-bottom: 1px solid #e4e6eb;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: #f8f9fa;
+    }
+    .news-post-header .user-info {
+        flex: 1;
+    }
+    .news-post-header .user-info div:first-child {
+        font-weight: 600;
+        color: #050505;
+        margin-bottom: 4px;
+    }
+    .status-select {
+        padding: 6px 12px;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .news-post-content {
+        padding: 20px;
+    }
+    .form-group {
+        margin-bottom: 16px;
+    }
+    .form-group label {
+        display: block;
+        font-size: 13px;
+        font-weight: 600;
+        color: #050505;
+        margin-bottom: 8px;
+    }
+    .facebook-like-input {
+        border: 1px solid #e4e6eb;
+        outline: none;
+        width: 100%;
+        padding: 12px;
+        font-size: 15px;
+        resize: vertical;
+        min-height: 80px;
+        border-radius: 8px;
+        font-family: inherit;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .facebook-like-input:focus {
+        border-color: #0a66c2;
+        box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+    }
+    .facebook-like-input::placeholder {
+        color: #8a8d91;
+    }
+    .news-post-images {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+        gap: 10px;
+        margin-top: 16px;
+    }
+    .news-image-preview {
+        position: relative;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #f0f2f5;
+    }
+    .news-image-preview img {
+        width: 100%;
+        height: 120px;
+        object-fit: cover;
+    }
+    .news-image-preview .remove-image {
+        position: absolute;
+        top: 6px;
+        right: 6px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        transition: background 0.2s;
+    }
+    .news-image-preview .remove-image:hover {
+        background: rgba(0, 0, 0, 0.9);
+    }
+    .post-actions {
+        padding: 16px 20px;
+        border-top: 1px solid #e4e6eb;
+        display: flex;
+        gap: 12px;
+        background: #f8f9fa;
+    }
+    .image-upload-btn {
+        flex: 0 0 auto;
+        padding: 10px 16px;
+        border: 1px solid #e4e6eb;
+        border-radius: 8px;
+        background: #fff;
+        cursor: pointer;
+        text-align: center;
+        transition: all 0.2s;
+        color: #0a66c2;
+        font-weight: 600;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .image-upload-btn:hover {
+        background: #f0f2f5;
+        border-color: #0a66c2;
+    }
+    .btn-primary {
+        background: #0a66c2 !important;
+        border: none !important;
+        border-radius: 8px !important;
+        font-weight: 600;
+        padding: 10px 20px !important;
+        transition: background 0.2s;
+        flex: 1;
+        font-size: 14px;
+    }
+    .btn-primary:hover {
+        background: #084399 !important;
+    }
+    .tox.tox-tinymce {
+        border: 1px solid #e4e6eb !important;
+        border-radius: 8px !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+    }
+    .tox-editor-header {
+        background: #f8f9fa !important;
+        border-bottom: 1px solid #e4e6eb !important;
+    }
+    .tox .tox-toolbar {
+        background: #f8f9fa !important;
+        border-bottom: 1px solid #e4e6eb !important;
+        padding: 8px 4px !important;
+    }
+    .tox .tox-toolbar__primary {
+        background: #f8f9fa !important;
+    }
+    #title {
+        border: 1px solid #e4e6eb;
+        border-radius: 8px;
+        padding: 12px;
+        font-size: 15px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    #title:focus {
+        border-color: #0a66c2;
+        box-shadow: 0 0 0 3px rgba(10, 102, 194, 0.1);
+        outline: none;
+    }
+    #status {
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        padding: 6px 12px;
+        font-size: 13px;
+    }
+    .status-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+    .status-draft {
+        background: #e4e6eb;
+        color: #65676b;
+    }
+    .status-published {
+        background: #42b72a;
+        color: white;
+    }
+    /* Table Styling */
+    .table-container {
+        margin-top: 30px;
+        background: #fff;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        overflow: hidden;
+    }
+    .table-header {
+        background: #f8f9fa;
+        padding: 20px;
+        border-bottom: 1px solid #e4e6eb;
+    }
+    .table-header h4 {
+        margin: 0;
+        color: #050505;
+        font-weight: 700;
+        font-size: 18px;
+    }
+    .table {
+        margin: 0;
+    }
+    .table thead th {
+        background: #f8f9fa;
+        border-bottom: 2px solid #e4e6eb;
+        color: #050505;
+        font-weight: 600;
+        font-size: 13px;
+        padding: 12px;
+        text-align: left;
+    }
+    .table tbody td {
+        border-bottom: 1px solid #e4e6eb;
+        padding: 14px 12px;
+        font-size: 14px;
+        vertical-align: middle;
+    }
+    .table tbody tr:hover {
+        background: #f8f9fa;
+    }
+</style>
+</style>
+
+<div class="container news-container">
+    <div class="page-header">
+        <h1>📰 Quản lý Tin tức & Bài viết</h1>
+    </div>
+
+    <!-- Form đăng bài giống Facebook -->
+    <% const canManageNews = typeof user !== "undefined" && (user.role === "super_admin" || user.role === "admin"); %>
+    <% if (canManageNews) { %>
+    <div class="news-post-container">
+        <div class="news-post-header">
+            <i class="fas fa-user-circle fa-2x text-primary"></i>
+            <div class="user-info flex-grow-1">
+                <div>Admin</div>
+                <select id="status" class="status-select">
+                    <option value="draft">Bản nháp</option>
+                    <option value="published">Công khai</option>
+                </select>
+            </div>
+        </div>
+        <div class="news-post-content">
+            <div class="form-group">
+                <label for="content">Nội dung bài viết</label>
+                <textarea 
+                    id="content" 
+                    class="facebook-like-input" 
+                    placeholder="Bạn đang nghĩ gì?"
+                ></textarea>
+            </div>
+            <div class="form-group">
+                <label for="title">Tiêu đề (tùy chọn)</label>
+                <input 
+                    type="text" 
+                    id="title" 
+                    class="form-control" 
+                    placeholder="Tiêu đề bài viết"
+                />
+            </div>
+            <div class="news-post-images" id="image-preview-container"></div>
+        </div>
+        <!-- Load TinyMCE from local file with Vietnamese language support -->
+        <script src="/text/tinymce.min.js"></script>
+        <script>
+        // Khởi tạo TinyMCE cho textarea content nếu chưa có
+        $(document).ready(function() {
+            if (typeof tinymce !== "undefined" && !tinymce.get("content")) {
+                tinymce.init({
+                    selector: "#content",
+                    license_key: "gpl", // Use GPL license for open source
+                    height: 300,
+                    menubar: false,
+                    plugins: [
+                        "advlist", "autolink", "lists", "link", "image", "charmap", "preview",
+                        "anchor", "searchreplace", "visualblocks", "code", "fullscreen",
+                        "insertdatetime", "media", "table", "code", "help", "wordcount", "emoticons"
+                    ],
+                    toolbar: "undo redo | formatselect | " +
+                        "bold italic backcolor | alignleft aligncenter " +
+                        "alignright alignjustify | bullist numlist outdent indent | " +
+                        "removeformat | help | emoticons",
+                    content_style: "body { font-family: Arial, sans-serif; font-size: 14px; }",
+                    language: "vi",
+                    language_url: "/text/langs/vi.js",
+                    branding: false,
+                    promotion: false,
+                    license_manager_enabled: false, // Disable license manager
+                    sandbox_iframes: false // Disable iframe sandboxing
+                });
+            }
+        });
+        </script>
+        <div class="post-actions">
+            <label class="image-upload-btn" style="cursor: pointer;">
+                <i class="fas fa-image"></i> Thêm ảnh/video
+                <input type="file" id="images" name="images" multiple accept="image/*,video/*" style="display: none;">
+            </label>
+            <button type="button" id="publish-btn" class="btn btn-primary flex-1">
+                <i class="fas fa-paper-plane"></i> Đăng bài
+            </button>
+        </div>
+    </div>
+    <% } %>
+
+    <!-- Danh sách bài viết -->
+    <div class="table-container">
+        <div class="table-header">
+            <h4>Danh sách bài viết</h4>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover" id="sample_data">
+                <thead>
+                    <tr>
+                        <th>Tiêu đề</th>
+                        <th>Tác giả</th>
+                        <th>Trạng thái</th>
+                        <th>Ngày đăng</th>
+                        <th>Lượt xem</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal chỉnh sửa -->
+<div class="modal" id="action_modal">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <form method="post" id="sample_form" enctype="multipart/form-data">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="dynamic_modal_title">Chỉnh sửa bài viết</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="action" id="action" value="Edit">
+                    <input type="hidden" name="id" id="id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tiêu đề</label>
+                        <input type="text" name="title" id="edit_title" class="form-control" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nội dung</label>
+                        <textarea name="content" id="edit_content" class="form-control" rows="8"></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Trạng thái</label>
+                        <select name="status" id="edit_status" class="form-control">
+                            <option value="draft">Bản nháp</option>
+                            <option value="published">Công khai</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Thêm ảnh mới</label>
+                        <input type="file" name="images" id="edit_images" multiple accept="image/*" class="form-control" />
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Ảnh hiện tại</label>
+                        <div id="current-images" class="d-flex flex-wrap gap-2"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+                    <button type="button" class="btn btn-success" id="publish_article_btn" style="display: none;">
+                        <i class="fas fa-paper-plane"></i> Đăng bài
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="action_button">Cập nhật</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    const currentUserRole = '<%= typeof user !== "undefined" ? user.role : "" %>';
+</script>
+<script src="/js/news.js"></script>
+

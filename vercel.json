@@ -1,0 +1,30 @@
+{
+  "version": 2,
+  "name": "tech-ecommerce-api",
+  "buildCommand": "npm install",
+  "builds": [
+    {
+      "src": "server.js",
+      "use": "@vercel/node",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "nodeVersion": "24.x",
+        "includeFiles": "config.env",
+        "excludeFiles": "uploads/**"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "server.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "server.js"
+    }
+  ],
+  "env": {
+    "NODE_ENV": "production"
+  }
+}

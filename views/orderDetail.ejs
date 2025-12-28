@@ -1,0 +1,369 @@
+<% layout('base') -%>
+<style>
+    .order-code-section {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .order-code-label {
+        font-size: 14px;
+        opacity: 0.9;
+        margin-bottom: 5px;
+    }
+    .order-code-value {
+        font-size: 24px;
+        font-weight: bold;
+        letter-spacing: 2px;
+        font-family: 'Courier New', monospace;
+    }
+    .print-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border: 2px dashed #dee2e6;
+    }
+    .product-card {
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .product-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    @media print {
+        .no-print {
+            display: none !important;
+        }
+        .print-section {
+            border: none;
+            padding: 0;
+            margin: 0;
+        }
+        .order-label-print {
+            page-break-inside: avoid;
+            border: 2px solid #000;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        .order-code-print {
+            font-size: 32px;
+            font-weight: bold;
+            text-align: center;
+            margin: 10px 0;
+            font-family: 'Courier New', monospace;
+        }
+        .order-info-print {
+            font-size: 12px;
+            line-height: 1.6;
+        }
+        .order-info-print strong {
+            font-weight: bold;
+        }
+    }
+</style>
+
+<div class="row mx-0">
+    <div class="col-lg-10 col-xl-8">
+        <!-- Mã đơn hàng nổi bật -->
+        <div class="order-code-section">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="order-code-label">MÃ ĐƠN HÀNG</div>
+                    <div class="order-code-value"><%= data._id %></div>
+                </div>
+                <div class="text-right">
+                    <div class="order-code-label">TRẠNG THÁI</div>
+                    <div>
+                        <% if (data.status == "Processed") { %>
+                            <span class="badge badge-warning" style="font-size: 14px; padding: 8px 15px;">Chờ xác nhận</span>
+                        <% } else if (data.status == "Waiting Goods") { %>
+                            <span class="badge badge-info" style="font-size: 14px; padding: 8px 15px;">Đã bàn giao cho đơn vị vận chuyển</span>
+                        <% } else if (data.status == "Delivery") { %>
+                            <span class="badge badge-primary" style="font-size: 14px; padding: 8px 15px;">Đã giao</span>
+                        <% } else if (data.status == "Success") { %>
+                            <span class="badge badge-success" style="font-size: 14px; padding: 8px 15px;">Hoàn thành</span>
+                        <% } else if (data.status == "Cancelled") { %>
+                            <span class="badge badge-danger" style="font-size: 14px; padding: 8px 15px;">Đã hủy</span>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Nút in/xuất -->
+        <div class="print-section no-print">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="mb-1"><i class="fas fa-print"></i> In thông tin đơn hàng</h5>
+                    <p class="text-muted mb-0 small">In mã đơn hàng và thông tin để dán trên đơn hàng</p>
+                </div>
+                <button class="btn btn-primary btn-lg" onclick="printOrderLabel()">
+                    <i class="fas fa-print"></i> In mã đơn hàng
+                </button>
+            </div>
+        </div>
+
+        <!-- Thông tin khách hàng -->
+        <div class="card" style="border-radius: 10px; margin-bottom: 20px;">
+            <div class="card-header px-4 py-4" style="background: linear-gradient(135deg, #a8729a 0%, #8b5a7a 100%); color: white;">
+                <h5 class="mb-0">
+                    <i class="fas fa-user"></i> 
+                    <% if (data.user && data.user.name) { %>
+                        <%= data.user.name %>
+                    <% } else { %>
+                        <%= data.receiver %> <span class="badge badge-light">Guest</span>
+                    <% } %>
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <!-- Danh sách sản phẩm -->
+                <% data.cart.forEach(function(value) {
+                    const name = value.product.title.length > 50 ? value.product.title.slice(0,50) + "..." : value.product.title;
+                    const percent = value.product.percent ? value.product.percent : 0;
+                %>
+                <div class="card shadow-sm border mb-3 product-card">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-md-2 text-center">
+                                <img src="<%= value.product.images[0]%>" class="img-fluid rounded" alt="Product" style="max-height: 100px; object-fit: contain;">
+                            </div>
+                            <div class="col-md-4">
+                                <h6 class="mb-2 font-weight-bold"><%= name %></h6>
+                                <p class="text-muted mb-1 small">
+                                    <i class="fas fa-palette"></i> Màu: <%= value.product.color || "N/A" %>
+                                </p>
+                                <p class="text-muted mb-0 small">
+                                    <i class="fas fa-memory"></i> RAM: <%= value.product.ram || "N/A" %>GB
+                                </p>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <p class="mb-0"><strong>Số lượng</strong></p>
+                                <p class="text-primary font-weight-bold" style="font-size: 20px;"><%= value.quantity %></p>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <p class="mb-0 text-muted small">Đơn giá</p>
+                                <p class="mb-0"><%= value.product.price.toLocaleString('vi-VN') %> VND</p>
+                                <% if (percent > 0) { %>
+                                <p class="text-danger mb-0 small">-<%= percent %>%</p>
+                                <% } %>
+                            </div>
+                            <div class="col-md-2 text-center">
+                                <p class="mb-0 text-muted small">Thành tiền</p>
+                                <p class="mb-0 font-weight-bold text-success">
+                                    <%= (value.product.promotion * value.quantity).toLocaleString('vi-VN') %> VND
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <% }); %>
+            </div>
+        </div>
+
+        <!-- Tiến trình đơn hàng -->
+        <div class="card card-stepper text-black" style="border-radius: 16px; margin-bottom: 20px;">
+            <div class="card-body p-5">
+                <div class="progress mb-4" style="height: 8px;">
+                    <div id="progress-bar" class="progress-bar" role="progressbar" style="width: 0%" aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+
+                <div class="d-flex justify-content-between">
+                    <div class="d-lg-flex align-items-center text-center">
+                        <i class="fas fa-clipboard-list fa-3x me-lg-4 mb-3 mb-lg-0 text-secondary"></i>
+                        <div>
+                            <p class="fw-bold mb-1">Chờ xác nhận</p>
+                            <p class="fw-bold mb-0">Processed</p>
+                        </div>
+                    </div>
+                    <div class="d-lg-flex align-items-center text-center">
+                        <i class="fas fa-truck fa-3x me-lg-4 mb-3 mb-lg-0 text-warning"></i>
+                        <div>
+                            <p class="fw-bold mb-1">Đã bàn giao cho đơn vị vận chuyển</p>
+                            <p class="fw-bold mb-0">Waiting Goods</p>
+                        </div>
+                    </div>
+                    <div class="d-lg-flex align-items-center text-center">
+                        <i class="fas fa-shipping-fast fa-3x me-lg-4 mb-3 mb-lg-0 text-info"></i>
+                        <div>
+                            <p class="fw-bold mb-1">Đã giao</p>
+                            <p class="fw-bold mb-0">Delivery</p>
+                        </div>
+                    </div>
+                    <div class="d-lg-flex align-items-center text-center">
+                        <i class="fas fa-check-circle fa-3x me-lg-4 mb-3 mb-lg-0 text-success"></i>
+                        <div>
+                            <p class="fw-bold mb-1">Hoàn thành</p>
+                            <p class="fw-bold mb-0">Success</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chi tiết đơn hàng -->
+        <div class="card" style="border-radius: 10px;">
+            <div class="card-header px-4 py-3 bg-light">
+                <h5 class="mb-0"><i class="fas fa-info-circle"></i> Chi tiết đơn hàng</h5>
+            </div>
+            <div class="card-body p-4">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-calendar"></i> Ngày đặt:</strong></p>
+                        <p class="text-muted mb-0"><%= data.date %></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-money-bill-wave"></i> Tổng tiền hàng:</strong></p>
+                        <p class="text-muted mb-0"><%= data.subTotal.toLocaleString('vi-VN') %> VND</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-user"></i> Người nhận:</strong></p>
+                        <p class="text-muted mb-0"><%= data.receiver %></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-tag"></i> Giảm giá:</strong></p>
+                        <p class="text-danger mb-0">-<%= data.discount.toLocaleString('vi-VN') %> VND</p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-phone"></i> Số điện thoại:</strong></p>
+                        <p class="text-muted mb-0"><%= data.phone %></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-truck"></i> Phí vận chuyển:</strong></p>
+                        <% if (data.shippingFee && data.shippingFee > 0) { %>
+                            <p class="text-muted mb-0"><%= data.shippingFee.toLocaleString('vi-VN') %> VND</p>
+                        <% } else { %>
+                            <p class="text-success mb-0">Miễn phí</p>
+                        <% } %>
+                    </div>
+                    <div class="col-md-12 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-map-marker-alt"></i> Địa chỉ:</strong></p>
+                        <p class="text-muted mb-0"><%= data.address %></p>
+                    </div>
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-credit-card"></i> Phương thức thanh toán:</strong></p>
+                        <p class="text-muted mb-0"><%= data.payments %></p>
+                    </div>
+                    <% if (data.user && data.user.email) { %>
+                    <div class="col-md-6 mb-3">
+                        <p class="mb-1"><strong><i class="fas fa-envelope"></i> Email:</strong></p>
+                        <p class="text-muted mb-0"><%= data.user.email %></p>
+                    </div>
+                    <% } %>
+                </div>
+            </div>
+            <div class="card-footer border-0 px-4 py-4" style="background: linear-gradient(135deg, #a8729a 0%, #8b5a7a 100%); border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;">
+                <h5 class="d-flex align-items-center justify-content-end text-white text-uppercase mb-0">
+                    Tổng thanh toán: 
+                    <span class="h2 mb-0 ms-2">
+                        <%= data.totalPrice.toLocaleString('vi-VN') %> VND
+                    </span>
+                </h5>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sidebar xử lý đơn hàng -->
+    <div class="col-lg-10 col-xl-4">
+        <div class="card border-status py-4 no-print" style="border-radius: 10px;">
+            <div class="card-header bg-primary text-white text-center">
+                <h4 class="mb-0"><i class="fas fa-cog"></i> Xử lý đơn hàng</h4>
+            </div>
+            <div class="card-body">
+                <input type="hidden" value="<%= data.status%>" id="status" />
+                
+                <div class="text-center">
+                    <% if (data.status=="Cancelled" ) { %>
+                        <div class="text-center">
+                            <button class="btn btn-danger btn-lg" disabled><i class="fas fa-ban"></i> Đã hủy</button>
+                        </div>
+                    <% } else if(data.status=="Processed" ) { %>
+                        <div class="d-flex flex-column gap-2">
+                            <button class="btn btn-success btn-lg" value="Waiting Goods" data-id="<%=data._id %>" onclick="acceptOrder(this)">
+                                <i class="fas fa-check"></i> Chấp nhận đơn hàng
+                            </button>
+                            <button class="btn btn-danger btn-lg" data-id="<%=data._id %>" onclick="cancelOrder(this)">
+                                <i class="fas fa-times"></i> Hủy đơn hàng
+                            </button>
+                        </div>
+                    <% } else if(data.status=="Waiting Goods" ) { %>
+                        <div class="d-flex flex-column gap-2">
+                            <button class="btn btn-info btn-lg" value="Delivery" data-id="<%=data._id %>" onclick="acceptOrder(this)">
+                                <i class="fas fa-truck"></i> Đã bàn giao cho đơn vị vận chuyển
+                            </button>
+                            <button class="btn btn-danger btn-lg" data-id="<%=data._id %>" onclick="cancelOrder(this)">
+                                <i class="fas fa-times"></i> Hủy đơn hàng
+                            </button>
+                        </div>
+                    <% } else if(data.status=="Delivery" ) { %>
+                        <div class="d-flex flex-column gap-2">
+                            <button class="btn btn-primary btn-lg" value="Success" data-id="<%=data._id %>" onclick="acceptOrder(this)">
+                                <i class="fas fa-shipping-fast"></i> Đã giao
+                            </button>
+                            <button class="btn btn-danger btn-lg" data-id="<%=data._id %>" onclick="cancelOrder(this)">
+                                <i class="fas fa-times"></i> Hủy đơn hàng
+                            </button>
+                        </div>
+                    <% } else { %>
+                        <div class="text-center">
+                            <button class="btn btn-success btn-lg" disabled>
+                                <i class="fas fa-check-circle"></i> Hoàn thành
+                            </button>
+                        </div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+        
+        <div class="my-4 text-center no-print">
+            <a href="/orders" class="btn btn-primary btn-lg">
+                <i class="fas fa-arrow-left"></i> Quay lại danh sách
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Phần in mã đơn hàng (ẩn khi không in) -->
+<div id="print-label" style="display: none;">
+    <div class="order-label-print">
+        <div style="text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 15px;">
+            <h2 style="margin: 0; font-weight: bold;">TQN FIGURE</h2>
+            <p style="margin: 5px 0; font-size: 14px;">Đơn hàng</p>
+        </div>
+        
+        <div class="order-code-print">
+            <%= data._id %>
+        </div>
+        
+        <div class="order-info-print" style="margin-top: 15px;">
+            <p style="margin: 5px 0;"><strong>Người nhận:</strong> <%= data.receiver %></p>
+            <p style="margin: 5px 0;"><strong>Điện thoại:</strong> <%= data.phone %></p>
+            <p style="margin: 5px 0;"><strong>Địa chỉ:</strong> <%= data.address %></p>
+            <p style="margin: 5px 0;"><strong>Ngày đặt:</strong> <%= data.date %></p>
+            <p style="margin: 5px 0;"><strong>Số lượng sản phẩm:</strong> <%= data.cart.length %> món</p>
+            <p style="margin: 5px 0;"><strong>Tổng tiền:</strong> <%= data.totalPrice.toLocaleString('vi-VN') %> VND</p>
+            <p style="margin: 5px 0;"><strong>Thanh toán:</strong> <%= data.payments %></p>
+        </div>
+        
+        <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #000;">
+            <p style="margin: 0; font-size: 10px; text-align: center;">
+                Quét mã QR để xem chi tiết đơn hàng
+            </p>
+        </div>
+    </div>
+</div>
+
+<script src="/js/detail.js"></script>
+<script>
+function printOrderLabel() {
+    const printContent = document.getElementById('print-label').innerHTML;
+    const originalContent = document.body.innerHTML;
+    
+    document.body.innerHTML = printContent;
+    window.print();
+    document.body.innerHTML = originalContent;
+    window.location.reload();
+}
+</script>
