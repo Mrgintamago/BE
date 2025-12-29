@@ -5,18 +5,19 @@ const AppError = require("./../utils/appError");
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
 const multer = require("multer");
+const logger = require("../utils/logger");
 
 const uploadFiles = upload.fields([{ name: "images", maxCount: 10 }]);
 
 exports.uploadNewsImages = (req, res, next) => {
-  console.log("uploadNewsImages: Content-Type =", req.headers['content-type']);
-  console.log("uploadNewsImages: req.body before multer =", req.body);
+  logger.log("uploadNewsImages: Content-Type =", req.headers['content-type']);
+  logger.log("uploadNewsImages: req.body before multer =", req.body);
   // Lưu author đã được set từ setAuthor middleware
   const savedAuthor = req.body.author;
   
   uploadFiles(req, res, (err) => {
     if (err instanceof multer.MulterError) {
-      console.error("Multer error:", err);
+      logger.error("Multer error:", err);
       if (err.code === "LIMIT_UNEXPECTED_FILE") {
         return next(
           new AppError("Vượt quá số lượng file quy định.", 400),
@@ -25,23 +26,23 @@ exports.uploadNewsImages = (req, res, next) => {
       }
       return next(new AppError(`Upload error: ${err.message}`, 400), false);
     } else if (err) {
-      console.error("Upload error:", err);
+      logger.error("Upload error:", err);
       return next(new AppError(`Upload thất bại: ${err.message}`, 400), false);
     }
-    console.log("uploadNewsImages: req.files after multer =", req.files);
-    console.log("uploadNewsImages: req.body after multer =", req.body);
+    logger.log("uploadNewsImages: req.files after multer =", req.files);
+    logger.log("uploadNewsImages: req.body after multer =", req.body);
     // Đảm bảo author không bị ghi đè bởi multer
     if (savedAuthor) {
       req.body.author = savedAuthor;
-      console.log("uploadNewsImages: Restored author =", req.body.author);
+      logger.log("uploadNewsImages: Restored author =", req.body.author);
     }
     next();
   });
 };
 
 exports.resizeNewsImages = catchAsync(async (req, res, next) => {
-  console.log("resizeNewsImages: req.body =", JSON.stringify(req.body, null, 2));
-  console.log("resizeNewsImages: req.files =", req.files);
+  logger.log("resizeNewsImages: req.body =", JSON.stringify(req.body, null, 2));
+  logger.log("resizeNewsImages: req.files =", req.files);
   
   // Parse existing images if provided
   let existingImages = [];
@@ -59,7 +60,7 @@ exports.resizeNewsImages = catchAsync(async (req, res, next) => {
         existingImages = req.body.images;
       }
     } catch (e) {
-      console.warn("Error parsing images:", e);
+      logger.warn("Error parsing images:", e);
       existingImages = [];
     }
   }
@@ -91,7 +92,7 @@ exports.resizeNewsImages = catchAsync(async (req, res, next) => {
           });
           return result.secure_url;
         } catch (error) {
-          console.error("Cloudinary upload error for file:", file.originalname, error);
+          logger.error("Cloudinary upload error for file:", file.originalname, error);
           return null; // Return null for failed uploads
         }
       });
@@ -100,15 +101,15 @@ exports.resizeNewsImages = catchAsync(async (req, res, next) => {
       // Filter out null values (failed uploads)
       existingImages.push(...uploadedUrls.filter(url => url !== null));
     } catch (error) {
-      console.error("Error uploading images:", error);
+      logger.error("Error uploading images:", error);
       // Continue even if some images fail
     }
   } else if (req.files && req.files.images && !isCloudinaryConfigured) {
-    console.warn("⚠️  Cloudinary chưa được cấu hình, bỏ qua upload ảnh");
+    logger.warn("⚠️  Cloudinary chưa được cấu hình, bỏ qua upload ảnh");
   }
   
   req.body.images = existingImages;
-  console.log("resizeNewsImages: final images =", existingImages);
+  logger.log("resizeNewsImages: final images =", existingImages);
   next();
 });
 
@@ -127,7 +128,7 @@ exports.deleteNewsImages = catchAsync(async (req, res, next) => {
       cloud_name === "your_cloud_name" || 
       api_key === "your_api_key" || 
       api_secret === "your_api_secret") {
-    console.warn("⚠️  Cloudinary not configured, skipping image deletion");
+    logger.warn("⚠️  Cloudinary not configured, skipping image deletion");
     return next();
   }
   
@@ -139,7 +140,7 @@ exports.deleteNewsImages = catchAsync(async (req, res, next) => {
         const getPublicId = imageURL.split("/").pop().split(".")[0];
         await cloudinary.uploader.destroy(getPublicId);
       } catch (error) {
-        console.error(`Error deleting image from Cloudinary: ${error.message}`);
+        logger.error(`Error deleting image from Cloudinary: ${error.message}`);
       }
     }
   }
@@ -148,17 +149,23 @@ exports.deleteNewsImages = catchAsync(async (req, res, next) => {
 });
 
 exports.setAuthor = catchAsync(async (req, res, next) => {
-  console.log("=== setAuthor middleware ===");
-  console.log("req.user =", req.user);
-  console.log("req.body.author (before) =", req.body.author);
-  console.log("req.headers.authorization =", req.headers.authorization);
-  console.log("req.cookies =", req.cookies);
+  logger.log("=== setAuthor middleware ===");
+  logger.log("req.user =", req.user);
+  logger.log("req.body.author (before) =", req.body.author);
+  logger.log("req.body.authorName (before) =", req.body.authorName);
+  logger.log("req.headers.authorization =", req.headers.authorization);
+  logger.log("req.cookies =", req.cookies);
   
   // Nếu req.user đã được set từ protect middleware, dùng nó
   if (req.user && req.user._id) {
     req.body.author = req.user._id.toString();
-    console.log("setAuthor: author set from req.user to", req.body.author);
-    console.log("=== end setAuthor ===");
+    // Nếu không có tên tác giả tùy chỉnh, dùng tên user
+    if (!req.body.authorName || req.body.authorName.trim() === "") {
+      req.body.authorName = req.user.name;
+    }
+    logger.log("setAuthor: author set from req.user to", req.body.author);
+    logger.log("setAuthor: authorName set to", req.body.authorName);
+    logger.log("=== end setAuthor ===");
     return next();
   }
   
@@ -175,7 +182,7 @@ exports.setAuthor = catchAsync(async (req, res, next) => {
   }
   
   if (!token) {
-    console.error("setAuthor error: No token found");
+    logger.error("setAuthor error: No token found");
     return next(new AppError("Bạn cần đăng nhập để đăng bài viết. Vui lòng đăng nhập lại.", 401));
   }
   
@@ -189,11 +196,16 @@ exports.setAuthor = catchAsync(async (req, res, next) => {
     
     req.user = currentUser;
     req.body.author = currentUser._id.toString();
-    console.log("setAuthor: author set from token to", req.body.author);
-    console.log("=== end setAuthor ===");
+    // Nếu không có tên tác giả tùy chỉnh, dùng tên user
+    if (!req.body.authorName || req.body.authorName.trim() === "") {
+      req.body.authorName = currentUser.name;
+    }
+    logger.log("setAuthor: author set from token to", req.body.author);
+    logger.log("setAuthor: authorName set to", req.body.authorName);
+    logger.log("=== end setAuthor ===");
     next();
   } catch (error) {
-    console.error("setAuthor error: Token verification failed", error);
+    logger.error("setAuthor error: Token verification failed", error);
     return next(new AppError("Token không hợp lệ. Vui lòng đăng nhập lại.", 401));
   }
 });

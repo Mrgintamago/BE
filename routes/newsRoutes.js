@@ -12,7 +12,7 @@ router.route("/").get(newsController.getAllNews);
 router.get(
   "/getTableNews",
   authController.protect,
-  authController.restrictTo("super_admin", "admin"),
+  authController.restrictTo("super_admin", "admin", "sales_staff"),
   newsController.getTableNews
 );
 
@@ -25,7 +25,7 @@ router.use(authController.protect);
 router
   .route("/")
   .post(
-    authController.restrictTo("super_admin", "admin"),
+    authController.restrictTo("super_admin", "admin", "sales_staff"),
     newsController.setAuthor,
     newsController.uploadNewsImages,
     newsController.resizeNewsImages,
@@ -35,14 +35,15 @@ router
 router
   .route("/:id")
   .patch(
-    authController.restrictTo("super_admin", "admin"),
+    authController.restrictTo("super_admin", "admin", "sales_staff"),
+    newsController.setAuthor,
     newsController.uploadNewsImages,
     newsController.resizeNewsImages,
     newsController.deleteNewsImages,
     newsController.updateNews
   )
   .delete(
-    authController.restrictTo("super_admin", "admin"),
+    authController.restrictTo("super_admin", "admin", "sales_staff"),
     newsController.deleteNewsImages,
     newsController.deleteNews
   );

@@ -3,6 +3,7 @@ const User = require("./../models/userModel");
 const catchAsync = require("./../utils/catchAsync");
 const AppError = require("./../utils/appError");
 const factory = require("./handlerFactory");
+const logger = require("../utils/logger");
 
 const signToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET, {
@@ -11,7 +12,7 @@ const signToken = (id) => {
 };
 const googleRedirect = (user, res) => {
   const token = signToken(user._id);
-  console.log(token);
+  logger.log(token);
   const cookieOptions = {
     expires: new Date(
       Date.now() + process.env.JWT_COOKIE_EXPIRES_IN * 24 * 60 * 60 * 1000
@@ -19,7 +20,7 @@ const googleRedirect = (user, res) => {
     httpOnly: true,
   };
   if (process.env.NODE_ENV === "production") cookieOptions.secure = true;
-  console.log(cookieOptions);
+  logger.log(cookieOptions);
   res.cookie("jwt", token, cookieOptions);
   res.locals.user = user;
 

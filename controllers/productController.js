@@ -5,12 +5,13 @@ const AppError = require("./../utils/appError");
 const cloudinary = require("../utils/cloudinary");
 const upload = require("../utils/multer");
 const multer = require("multer");
+const logger = require("../utils/logger");
 
 const uploadFiles = upload.fields([{ name: "images", maxCount: 5 }]);
 exports.uploadProductImages = (req, res, next) => {
   uploadFiles(req, res, (err) => {
     if (err instanceof multer.MulterError) {
-      console.error("📁 Multer Error:", err.code, err.message);
+      logger.error("📁 Multer Error:", err.code, err.message);
       if (err.code === "LIMIT_UNEXPECTED_FILE") {
         return next(
           new AppError("Vượt quá số lượng file quy định.", 400),
@@ -28,8 +29,8 @@ exports.uploadProductImages = (req, res, next) => {
         false
       );
     } else if (err) {
-      console.error("📁 Upload Error (non-Multer):", err.message);
-      console.error(err);
+      logger.error("📁 Upload Error (non-Multer):", err.message);
+      logger.error(err);
       return next(new AppError(`Upload thất bại: ${err.message}`, 400), false);
     }
     if (req.body.promotion == "") req.body.promotion = req.body.price;
@@ -40,9 +41,9 @@ exports.uploadProductImages = (req, res, next) => {
 exports.resizeProductImages = catchAsync(async (req, res, next) => {
   if (req.files === undefined || !req.files.images) return next();
   
-  console.log("📤 Uploading images to Cloudinary...");
-  console.log("Request body:", JSON.stringify(req.body));
-  console.log("Files:", req.files.images.map(f => ({ name: f.originalname, size: f.size })));
+  logger.log("📤 Uploading images to Cloudinary...");
+  logger.log("Request body:", JSON.stringify(req.body));
+  logger.log("Files:", req.files.images.map(f => ({ name: f.originalname, size: f.size })));
   
   // Check if Cloudinary is configured
   const cloud_name = process.env.CLOUDINARY_CLOUD_NAME;
@@ -53,7 +54,7 @@ exports.resizeProductImages = catchAsync(async (req, res, next) => {
       cloud_name === "your_cloud_name" || 
       api_key === "your_api_key" || 
       api_secret === "your_api_secret") {
-    console.error("❌ Cloudinary not configured");
+    logger.error("❌ Cloudinary not configured");
     return next(
       new AppError(
         "Cloudinary chưa được cấu hình. Vui lòng cập nhật CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, và CLOUDINARY_API_SECRET trong file config.env",
@@ -66,7 +67,7 @@ exports.resizeProductImages = catchAsync(async (req, res, next) => {
   // Upload images in parallel for better performance
   try {
     const uploadPromises = req.files.images.map(async (file) => {
-      console.log(`📸 Uploading file: ${file.originalname} (${file.size} bytes)`);
+      logger.log(`📸 Uploading file: ${file.originalname} (${file.size} bytes)`);
       
       // Upload buffer directly to Cloudinary (for serverless functions)
       return new Promise((resolve, reject) => {
@@ -79,10 +80,10 @@ exports.resizeProductImages = catchAsync(async (req, res, next) => {
           },
           (error, result) => {
             if (error) {
-              console.error(`❌ Upload failed for ${file.originalname}:`, error.message);
+              logger.error(`❌ Upload failed for ${file.originalname}:`, error.message);
               reject(error);
             } else {
-              console.log(`✅ File uploaded: ${result.url}`);
+              logger.log(`✅ File uploaded: ${result.url}`);
               resolve(result.url);
             }
           }
@@ -92,10 +93,10 @@ exports.resizeProductImages = catchAsync(async (req, res, next) => {
     });
     
     req.body.images = await Promise.all(uploadPromises);
-    console.log(`✅ All ${req.body.images.length} images uploaded successfully`);
+    logger.log(`✅ All ${req.body.images.length} images uploaded successfully`);
   } catch (error) {
-    console.error(`❌ Cloudinary upload error: ${error.message}`);
-    console.error(error);
+    logger.error(`❌ Cloudinary upload error: ${error.message}`);
+    logger.error(error);
     return next(
       new AppError(
         `Lỗi khi upload ảnh lên Cloudinary: ${error.message}`,
@@ -122,7 +123,7 @@ exports.deleteImageCloud = catchAsync(async (req, res, next) => {
       api_key === "your_api_key" || 
       api_secret === "your_api_secret") {
     // Skip deletion if Cloudinary is not configured
-    console.warn("⚠️  Cloudinary not configured, skipping image deletion");
+    logger.warn("⚠️  Cloudinary not configured, skipping image deletion");
     return next();
   }
   
@@ -135,7 +136,7 @@ exports.deleteImageCloud = catchAsync(async (req, res, next) => {
         const getPublicId = imageURL.split("/").pop().split(".")[0];
         await cloudinary.uploader.destroy(getPublicId);
       } catch (error) {
-        console.error(`Error deleting image from Cloudinary: ${error.message}`);
+        logger.error(`Error deleting image from Cloudinary: ${error.message}`);
         // Continue with other images even if one fails
       }
     }

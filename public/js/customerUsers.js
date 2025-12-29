@@ -8,6 +8,7 @@ const loadData = async () => {
       serverMethod: "get",
       ajax: {
         url: "api/v1/users/getTableCustomerUsers",
+        xhrFields: { withCredentials: true },
       },
       columns: [
         {

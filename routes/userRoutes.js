@@ -43,7 +43,7 @@ router.route("/getTableAdminUsers").get(
 );
 
 router.route("/getTableCustomerUsers").get(
-  authController.restrictTo("super_admin", "admin"),
+  authController.restrictTo("super_admin", "admin", "sales_staff"),
   userController.getTableCustomerUsers
 );
 
@@ -66,11 +66,11 @@ router
 
 router
   .route("/customer-users")
-  .get(authController.restrictTo("super_admin", "admin"), userController.getAllCustomerUsers);
+  .get(authController.restrictTo("super_admin", "admin", "sales_staff"), userController.getAllCustomerUsers);
 
 router
   .route("/customer-users/:id")
-  .get(authController.restrictTo("super_admin", "admin"), userController.getUser)
+  .get(authController.restrictTo("super_admin", "admin", "sales_staff"), userController.getUser)
   .patch(authController.restrictTo("super_admin"), userController.updateUser)
   .delete(authController.restrictTo("super_admin"), userController.deleteUser);
 
@@ -85,14 +85,14 @@ router
 // Legacy routes (keep for backward compatibility)
 router
   .route("/")
-  .get(authController.restrictTo("super_admin", "admin"), userController.getAllUsers)
+  .get(authController.restrictTo("super_admin", "admin", "manager", "sales_staff"), userController.getAllUsers)
   .post(authController.restrictTo("super_admin"), userController.createUser);
 
 // Generic /:id route - MUST be last to not match specific routes like /logout
 // Use regex to only match valid ObjectIds, not string literals
 router
   .route("/:id(^[0-9a-fA-F]{24}$)")
-  .get(authController.restrictTo("super_admin", "admin"), userController.getUser)
+  .get(authController.restrictTo("super_admin", "admin", "sales_staff"), userController.getUser)
   .patch(authController.restrictTo("super_admin"), userController.updateUser)
   .delete(authController.restrictTo("super_admin"), userController.deleteUser);
 

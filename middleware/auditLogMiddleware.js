@@ -1,4 +1,5 @@
 const AuditLog = require("../models/auditLogModel");
+const logger = require("../utils/logger");
 
 /**
  * SECURITY: Audit Logging Middleware
@@ -91,7 +92,7 @@ const auditLog = async (req, res, next) => {
         await AuditLog.log(logData);
       }
     } catch (error) {
-      console.error("❌ Audit logging error:", error.message);
+      logger.error("❌ Audit logging error:", error.message);
       // Don't throw - audit logging failure shouldn't affect main app
     }
   });
@@ -125,9 +126,9 @@ const logAction = async (req, action, resourceType, resourceId = null, details =
     };
 
     await AuditLog.log(logData);
-    console.log(`✅ Audit logged: ${action}`);
+    logger.log(`✅ Audit logged: ${action}`);
   } catch (error) {
-    console.error("❌ Failed to log action:", error.message);
+    logger.error("❌ Failed to log action:", error.message);
   }
 };
 

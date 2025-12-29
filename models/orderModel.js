@@ -87,7 +87,7 @@ orderSchema.post("save", function () {
 });
 
 orderSchema.post("findOneAndUpdate", async function (doc) {
-  if (doc.payments !== "tiền mặt" && doc.status === "Cancelled")
+  if (doc && doc.user && doc.payments !== "tiền mặt" && doc.status === "Cancelled")
     await Transaction.create({
       user: doc.user._id.toString(),
       amount: doc.totalPrice,

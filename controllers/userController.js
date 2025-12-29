@@ -3,6 +3,7 @@ const catchAsync = require("./../utils/catchAsync");
 const AppError = require("./../utils/appError");
 const factory = require("./handlerFactory");
 const mongoose = require("mongoose");
+const logger = require("../utils/logger");
 
 const filterObj = (obj, ...allowedFields) => {
   const newObj = {};
@@ -248,7 +249,7 @@ exports.setDefaultAddress = catchAsync(async (req, res) => {
   const userId = req.user._id;
   let addressId = req.body.id;
   
-  console.log("[SET DEFAULT ADDRESS] 📝 Request - addressId:", addressId, "type:", typeof addressId);
+  logger.log("[SET DEFAULT ADDRESS] 📝 Request - addressId:", addressId, "type:", typeof addressId);
   
   if (addressId === null || addressId === undefined || addressId === '') {
     return res.status(400).json({
@@ -267,27 +268,27 @@ exports.setDefaultAddress = catchAsync(async (req, res) => {
     });
   }
   
-  console.log("[SET DEFAULT ADDRESS] User has", user.address.length, "addresses");
+  logger.log("[SET DEFAULT ADDRESS] User has", user.address.length, "addresses");
   
   // Handle both array index (number) and ObjectId (string)
   let addressIndex = -1;
   
   if (typeof addressId === 'number') {
     // Frontend sent array index directly
-    console.log("[SET DEFAULT ADDRESS] 📝 Received array index:", addressId);
+    logger.log("[SET DEFAULT ADDRESS] 📝 Received array index:", addressId);
     addressIndex = addressId;
   } else if (typeof addressId === 'string') {
     // Frontend sent ObjectId string
-    console.log("[SET DEFAULT ADDRESS] 📝 Received ObjectId string:", addressId);
+    logger.log("[SET DEFAULT ADDRESS] 📝 Received ObjectId string:", addressId);
     try {
       const objectId = new mongoose.Types.ObjectId(addressId);
       addressIndex = user.address.findIndex(addr => {
         const matches = addr._id.equals(objectId);
-        console.log(`Comparing ${addr._id.toString()} equals ${objectId.toString()} ? ${matches}`);
+        logger.log(`Comparing ${addr._id.toString()} equals ${objectId.toString()} ? ${matches}`);
         return matches;
       });
     } catch (error) {
-      console.log("[SET DEFAULT ADDRESS] ❌ Invalid ObjectId format:", addressId);
+      logger.log("[SET DEFAULT ADDRESS] ❌ Invalid ObjectId format:", addressId);
       return res.status(400).json({
         status: "error",
         message: "ID địa chỉ không hợp lệ",
@@ -296,9 +297,9 @@ exports.setDefaultAddress = catchAsync(async (req, res) => {
   }
   
   if (addressIndex === -1) {
-    console.log("[SET DEFAULT ADDRESS] ❌ Address not found");
-    console.log("Available IDs:", user.address.map(a => a._id.toString()));
-    console.log("Looking for:", addressId.toString());
+    logger.log("[SET DEFAULT ADDRESS] ❌ Address not found");
+    logger.log("Available IDs:", user.address.map(a => a._id.toString()));
+    logger.log("Looking for:", addressId.toString());
     return res.status(400).json({
       status: "error",
       message: "Không tìm thấy địa chỉ",
@@ -335,7 +336,7 @@ exports.getUserAddress = (req, res) => {
       message: "Get all user address successfully.",
     });
   } catch (error) {
-    console.error("getUserAddress error:", error);
+    logger.error("getUserAddress error:", error);
     res.status(500).json({
       status: "error",
       message: error.message,
@@ -462,7 +463,7 @@ exports.getTableAdminUsers = catchAsync(async (req, res, next) => {
 
     res.status(200).json(data);
   } catch (error) {
-    console.error("getTableAdminUsers error:", error);
+    logger.error("getTableAdminUsers error:", error);
     return res.status(500).json({
       draw: Number(req.query.draw) || 1,
       recordsFiltered: 0,
@@ -511,7 +512,7 @@ exports.getTableCustomerUsers = catchAsync(async (req, res, next) => {
 
     res.status(200).json(data);
   } catch (error) {
-    console.error("getTableCustomerUsers error:", error);
+    logger.error("getTableCustomerUsers error:", error);
     return res.status(500).json({
       draw: Number(req.query.draw) || 1,
       recordsFiltered: 0,

@@ -36,7 +36,7 @@ const checkRole = (...allowedRoles) => {
 router.get("/", (req, res, next) => {
   res.status(200).render("dashboard",{title:"Dashboard"});
 });
-router.get("/analytics", checkRole("super_admin", "admin", "manager", "sales_staff"), (req, res, next) => {
+router.get("/analytics", checkRole("super_admin", "admin", "manager"), (req, res, next) => {
   res.status(200).render("analytic",{title:"Analytics"});
 });
 // Legacy route - keep for backward compatibility
@@ -47,8 +47,8 @@ router.get("/users", checkRole("super_admin", "admin"), (req, res, next) => {
 router.get("/admin-users", checkRole("super_admin"), (req, res, next) => {
   res.status(200).render("adminUsers",{title:"Quản lý Admin Users"});
 });
-// Customer Users - Super Admin and Admin can access
-router.get("/customer-users", checkRole("super_admin", "admin"), (req, res, next) => {
+// Customer Users - Super Admin, Admin, and Sales Staff can access
+router.get("/customer-users", checkRole("super_admin", "admin", "sales_staff"), (req, res, next) => {
   res.status(200).render("customerUsers",{title:"Quản lý Customer Users"});
 });
 router.get("/products", checkRole("super_admin", "admin"), (req, res, next) => {
@@ -97,7 +97,7 @@ router.get("/categories", checkRole("super_admin", "admin"), (req, res, next) =>
 router.get("/reviews", checkRole("super_admin", "admin"), (req, res, next) => {
   res.status(200).render("review",{title:"Manage Review"});
 });
-router.get("/news", checkRole("super_admin", "admin"), (req, res, next) => {
+router.get("/news", checkRole("super_admin", "admin", "sales_staff"), (req, res, next) => {
   res.status(200).render("news",{title:"Manage News & Articles"});
 });
 router.get("/partner-registrations", checkRole("super_admin", "admin", "manager", "sales_staff"), (req, res, next) => {

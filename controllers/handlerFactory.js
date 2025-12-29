@@ -8,6 +8,7 @@ const Import = require("./../models/importModel");
 const User = require("./../models/userModel");
 const Comment = require("./../models/commentModel");
 const News = require("./../models/newsModel");
+const logger = require("../utils/logger");
 
 // async function recursiveChildren(obj, arr) {
 //   const data = await Comment.findById(obj);
@@ -89,21 +90,21 @@ exports.deleteOne = (Model) =>
 exports.updateOne = (Model) =>
   catchAsync(async (req, res, next) => {
     if (Model == Product) {
-      console.log("[UPDATE PRODUCT] 📝 Request body:", Object.keys(req.body));
-      console.log("[UPDATE PRODUCT] Price:", req.body.price, "Promotion:", req.body.promotion);
+      logger.log("[UPDATE PRODUCT] 📝 Request body:", Object.keys(req.body));
+      logger.log("[UPDATE PRODUCT] Price:", req.body.price, "Promotion:", req.body.promotion);
       
       req.body.updatedBy = req.user.id;
       req.body.updatedAt = Date.now() - 1000;
       
       // Handle description safely - only if provided
       if (req.body.description) {
-        console.log("[UPDATE PRODUCT] ✅ Processing description");
+        logger.log("[UPDATE PRODUCT] ✅ Processing description");
         req.body.description = req.body.description
           .replace(/&lt;/g, "<")
           .replace(/&gt;/g, ">");
       }
       
-      console.log("[UPDATE PRODUCT] 🔄 Updating document...");
+      logger.log("[UPDATE PRODUCT] 🔄 Updating document...");
       const doc = await Model.findByIdAndUpdate(req.params.id, req.body, {
         new: true,
         runValidators: false,
@@ -112,7 +113,7 @@ exports.updateOne = (Model) =>
         return next(new AppError("Không tìm thấy dữ liệu với ID này", 404));
       }
 
-      console.log("[UPDATE PRODUCT] ✅ Updated successfully");
+      logger.log("[UPDATE PRODUCT] ✅ Updated successfully");
       res.status(200).json({
         status: "success",
         data: {
@@ -219,7 +220,7 @@ exports.createOne = (Model) =>
         },
       });
     } catch (error) {
-      console.error("Create error:", error);
+      logger.error("Create error:", error);
       // Xử lý lỗi validation
       if (error.name === 'ValidationError') {
         const messages = Object.values(error.errors).map(err => err.message).join(', ');
@@ -475,12 +476,12 @@ exports.getTable = (Model) =>
       try {
         recordsTotal = await Model.countDocuments({});
       } catch (e) {
-        console.warn("countDocuments total error:", e);
+        logger.warn("countDocuments total error:", e);
       }
       try {
         recordsFiltered = await Model.countDocuments(filter);
       } catch (e) {
-        console.warn("countDocuments filtered error:", e);
+        logger.warn("countDocuments filtered error:", e);
       }
       
       // Build query với populate nếu cần (pre hook sẽ tự động populate)
@@ -515,7 +516,7 @@ exports.getTable = (Model) =>
       };
       res.status(200).json(data);
     } catch (error) {
-      console.error("getTable error:", error);
+      logger.error("getTable error:", error);
       return res.status(500).json({
         draw: Number(req.query.draw) || 1,
         recordsFiltered: 0,

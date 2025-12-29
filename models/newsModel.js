@@ -27,6 +27,11 @@ const newsSchema = new mongoose.Schema(
         message: "Tác giả phải là một ObjectId hợp lệ"
       }
     },
+    authorName: {
+      type: String,
+      trim: true,
+      default: null, // Will be set by setAuthor middleware if not provided
+    },
     status: {
       type: String,
       enum: ["draft", "published"],

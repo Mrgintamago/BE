@@ -19,15 +19,16 @@
     <% const isAdmin = userRole === 'admin'; %>
     <% const isManager = userRole === 'manager'; %>
     <% const isSalesStaff = userRole === 'sales_staff'; %>
-    <% const canViewAnalytics = isSuperAdmin || isAdmin || isManager || isSalesStaff; %>
+    <% const canViewAnalytics = isSuperAdmin || isAdmin || isManager; %>
     <% const canManageUsers = isSuperAdmin || isAdmin; %>
-    <% const canManageOrders = isSuperAdmin || isAdmin || isManager || isSalesStaff; %>
+    <% const canViewCustomers = isSuperAdmin || isAdmin || isSalesStaff; %>
+    <% const canManageOrders = isSuperAdmin || isAdmin || isManager; %>
     <% const canManageProducts = isSuperAdmin || isAdmin; %>
     <% const canManageCategories = isSuperAdmin || isAdmin; %>
     <% const canManageBrands = isSuperAdmin || isAdmin; %>
-    <% const canManageNews = isSuperAdmin || isAdmin; %>
+    <% const canManageNews = isSuperAdmin || isAdmin || isSalesStaff; %>
     <% const canManageReviews = isSuperAdmin || isAdmin; %>
-    <% const canManagePartnerReg = isSuperAdmin || isAdmin || isManager || isSalesStaff; %>
+    <% const canManagePartnerReg = isSuperAdmin || isAdmin || isManager; %>
 
     <% if (canViewAnalytics) { %>
     <li class="nav-item">
@@ -53,12 +54,12 @@
             <span>Admin Users</span></a>
     </li>
     <% } %>
-    <!-- Nav Item - Customer Users (Super Admin and Admin) -->
-    <% if (canManageUsers) { %>
+    <!-- Nav Item - Customer Users (Super Admin, Admin, and Sales Staff) -->
+    <% if (canViewCustomers) { %>
     <li class="nav-item">
         <a class="nav-link" href="/customer-users">
             <i class="far fa-user"></i>
-            <span>Customer Users</span></a>
+            <span><%= isAdmin || isSuperAdmin ? 'Customer Users' : 'Khách hàng' %></span></a>
     </li>
     <% } %>
     <% if (canManageOrders) { %>

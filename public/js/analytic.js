@@ -110,12 +110,14 @@ async function loadPieChart(dt) {
       data = await $.ajax({
         url: "api/v1/orders/countOption",
         method: "POST",
+        xhrFields: { withCredentials: true },
       });
     } else {
       data = await $.ajax({
         url: "api/v1/orders/statusInRange",
         method: "POST",
         data: dt,
+        xhrFields: { withCredentials: true },
       });
     }
     await data.forEach(async (value) => {
@@ -156,14 +158,17 @@ $(document).ready(async function () {
     countUser = await $.ajax({
       url: "api/v1/users",
       method: "GET",
+      xhrFields: { withCredentials: true },
     });
     totalRevenue = await $.ajax({
       url: "api/v1/orders/sumOption",
       method: "POST",
+      xhrFields: { withCredentials: true },
     });
     topProduct = await $.ajax({
       url: "api/v1/orders/topProduct",
       method: "POST",
+      xhrFields: { withCredentials: true },
     });
   } catch (error) {
     console.error("Error loading analytics data:", error);
@@ -175,6 +180,7 @@ $(document).ready(async function () {
   const topInventory = await $.ajax({
     url: "api/v1/products?sort=-inventory&limit=5",
     method: "GET",
+    xhrFields: { withCredentials: true },
   });
   if (topProduct.length == 0) {
     $("#sell-product").append(
@@ -261,20 +267,24 @@ async function changeData(e) {
     const countUser = await $.ajax({
       url: "api/v1/users",
       method: "GET",
+      xhrFields: { withCredentials: true },
     });
     const totalRevenue = await $.ajax({
       url: "api/v1/orders/sumOption",
       method: "POST",
+      xhrFields: { withCredentials: true },
     });
     // Import functionality has been removed
     const totalImport = []; // Empty array since imports are no longer available
     const topProduct = await $.ajax({
       url: "api/v1/orders/topProduct",
       method: "POST",
+      xhrFields: { withCredentials: true },
     });
     const topInventory = await $.ajax({
       url: "api/v1/products?sort=-inventory&limit=5",
       method: "GET",
+      xhrFields: { withCredentials: true },
     });
     $("#sell-product").empty();
     if (topProduct.length == 0) {
@@ -378,6 +388,7 @@ async function changeData(e) {
       url: "api/v1/orders/sumInRange",
       method: "POST",
       data,
+      xhrFields: { withCredentials: true },
     });
     const revenueValue = totalRevenue[0] ? totalRevenue[0].total_revenue : 0;
     document.getElementById("totalRevenue").innerHTML =
@@ -398,6 +409,7 @@ async function changeData(e) {
       url: "api/v1/orders/topProductInRange",
       method: "POST",
       data,
+      xhrFields: { withCredentials: true },
     });
     $("#sell-product").empty();
     if (topProduct.length == 0) {

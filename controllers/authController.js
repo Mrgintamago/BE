@@ -8,6 +8,7 @@ const Order = require("./../models/orderModel");
 const TokenBlacklist = require("./../models/tokenBlacklistModel");
 const catchAsync = require("./../utils/catchAsync");
 const AppError = require("./../utils/appError");
+const logger = require("./../utils/logger");
 const sendEmail = require("./../utils/email");
 
 // SECURITY: Simple password validation function
@@ -35,10 +36,10 @@ const hasStreamCredentials = api_key &&
                              app_id.trim() !== "";
 
 if (!hasStreamCredentials) {
-  console.warn("⚠️  Stream Chat credentials are missing or not configured!");
-  console.warn("   Please set STREAM_API_KEY, STREAM_API_SECRET, and STREAM_APP_ID in config.env");
-  console.warn("   Get your credentials from: https://dashboard.getstream.io/");
-  console.warn("   Chat functionality may not work properly until configured.");
+  logger.warn("⚠️  Stream Chat credentials are missing or not configured!");
+  logger.warn("   Please set STREAM_API_KEY, STREAM_API_SECRET, and STREAM_APP_ID in config.env");
+  logger.warn("   Get your credentials from: https://dashboard.getstream.io/");
+  logger.warn("   Chat functionality may not work properly until configured.");
 }
 
 // SECURITY: Dual-token system (Access + Refresh)
@@ -134,7 +135,7 @@ const createSendToken = async (user, statusCode, res) => {
       const serverClient = connect(api_key, api_secret, app_id);
       tokenStream = serverClient.createUserToken(user._id.toString());
     } catch (error) {
-      console.error("Error creating Stream Chat token:", error.message);
+      logger.error("Error creating Stream Chat token:", error.message);
     }
   }
 
@@ -176,7 +177,7 @@ const sendVerifyToken = catchAsync(async (user, statusCode, res) => {
       const serverClient = connect(api_key, api_secret, app_id);
       tokenStream = serverClient.createUserToken(user._id.toString());
     } catch (error) {
-      console.error("Error creating Stream Chat token:", error.message);
+      logger.error("Error creating Stream Chat token:", error.message);
       // Continue without Stream token if there's an error
     }
   }
@@ -213,7 +214,7 @@ const sendVerifyToken = catchAsync(async (user, statusCode, res) => {
       message: "Token sent to email!",
     });
   } catch (err) {
-    console.log(err);
+    logger.log(err);
     // Still return response even if email fails
     res.status(statusCode).json({
       status: "success",
@@ -246,11 +247,11 @@ exports.verifyUser = catchAsync(async (req, res, next) => {
     .createHash("sha256")
     .update(req.body.encode)
     .digest("hex");
-  console.log(hashedToken);
+  logger.log(hashedToken);
   const user = await User.findOne({
     userVerifyToken: hashedToken,
   });
-  console.log(user);
+  logger.log(user);
   // 2) If token true, verify this user
   if (!user) {
     return next(new AppError("Mã xác nhận không hợp lệ hoặc đã hết hạn", 400));
@@ -280,7 +281,7 @@ exports.signup = catchAsync(async (req, res, next) => {
   }
   
   const userExist = await User.find({ email: req.body.email });
-  console.log(JSON.stringify(userExist));
+  logger.log(JSON.stringify(userExist));
   if (JSON.stringify(userExist) != "[]") {
     return next(new AppError("Email này đã được đăng ký.", 500));
   }
@@ -296,7 +297,7 @@ exports.signup = catchAsync(async (req, res, next) => {
 
 exports.login = catchAsync(async (req, res, next) => {
   const { email, password } = req.body;
-  console.log("🔐 Login attempt:", { email, timestamp: new Date().toISOString() });
+  logger.log("🔐 Login attempt:", { email, timestamp: new Date().toISOString() });
 
   // SECURITY: Input validation
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -308,13 +309,13 @@ exports.login = catchAsync(async (req, res, next) => {
   }
   
   // 2) Check if user exists && password is correct
-  console.log("🔍 Searching for user:", email);
+  logger.log("🔍 Searching for user:", email);
   const user = await User.findOne({ email }).select("+password +loginAttempts +lockUntil");
-  console.log("✅ User found:", user ? "YES" : "NO");
+  logger.log("✅ User found:", user ? "YES" : "NO");
 
   // SECURITY: Check if account is locked
   if (user && user.isAccountLocked()) {
-    console.warn(`⚠️ Login attempt on locked account: ${email}`);
+    logger.warn(`⚠️ Login attempt on locked account: ${email}`);
     const lockUntilTime = new Date(user.lockUntil);
     const lockUntilMinutes = Math.ceil((lockUntilTime - Date.now()) / (60 * 1000));
     
@@ -339,7 +340,7 @@ exports.login = catchAsync(async (req, res, next) => {
       
       // If account just got locked (5th attempt)
       if (user.isAccountLocked()) {
-        console.warn(`⚠️ Account locked after 5 failed attempts: ${email}`);
+        logger.warn(`⚠️ Account locked after 5 failed attempts: ${email}`);
         const lockUntilTime = new Date(user.lockUntil);
         const lockUntilMinutes = Math.ceil((lockUntilTime - Date.now()) / (60 * 1000));
         
@@ -352,7 +353,7 @@ exports.login = catchAsync(async (req, res, next) => {
         error.lockUntil = lockUntilTime;
         return next(error);
       } else if (remainingAttempts > 0) {
-        console.warn(`⚠️ Login failed for ${email}. Remaining attempts: ${remainingAttempts}`);
+        logger.warn(`⚠️ Login failed for ${email}. Remaining attempts: ${remainingAttempts}`);
         const error = new AppError(
           `Mật khẩu không chính xác. Bạn còn ${remainingAttempts} lần thử.`,
           401
@@ -505,7 +506,7 @@ exports.restrictTo = (...roles) => {
   return (req, res, next) => {
     // roles ['admin', 'employee',[user]]. role='user'
     if (req.user == undefined || !roles.includes(req.user.role)) {
-      console.log(`[AUTH] Access Denied - User role: ${req.user?.role || 'undefined'}, Required: ${roles.join(', ')}`);
+      logger.log(`[AUTH] Access Denied - User role: ${req.user?.role || 'undefined'}, Required: ${roles.join(', ')}`);
       return next(new AppError("Bạn không có quyền thực hiện", 403));
     }
     next();
@@ -570,7 +571,7 @@ exports.forgotPassword = catchAsync(async (req, res, next) => {
       message: "Token sent to email!",
     });
   } catch (err) {
-    console.log(err);
+    logger.log(err);
     user.passwordResetToken = undefined;
     user.passwordResetExpires = undefined;
     await user.save({ validateBeforeSave: false });
@@ -639,29 +640,72 @@ exports.updatePassword = catchAsync(async (req, res, next) => {
   await user.save();
   // User.findByIdAndUpdate will NOT work as intended!
 
-  // 4) Log user in, send JWT
-  createSendToken(user, 200, res);
+  // 4) SECURITY: Force logout by blacklisting the current token
+  const token = req.headers.authorization?.split(' ')[1];
+  if (token) {
+    try {
+      const decoded = jwt.decode(token);
+      if (decoded) {
+        await TokenBlacklist.create({
+          token: token,
+          expiresAt: new Date(decoded.exp * 1000),
+        });
+        if (process.env.NODE_ENV === "development") {
+          logger.log(`[PASSWORD UPDATE] 🔐 Token blacklisted for user: ${user._id}`);
+        }
+      }
+    } catch (error) {
+      if (process.env.NODE_ENV === "development") {
+        logger.error("[PASSWORD UPDATE] Error blacklisting token:", error.message);
+      }
+    }
+  }
+
+  // 5) Clear JWT cookie
+  const cookieOptions = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: process.env.NODE_ENV === "production" ? "strict" : "lax",
+    path: "/",
+  };
+  res.clearCookie("jwt", cookieOptions);
+  res.clearCookie("refreshToken", cookieOptions);
+
+  // 6) Return response requiring user to login again
+  res.status(200).json({
+    status: "success",
+    message: "Mật khẩu đã được cập nhật thành công. Vui lòng đăng nhập lại.",
+    requireLogin: true,
+  });
 });
 
 // Logout endpoint - bỏ qua token expiry check
 exports.logout = async (req, res) => {
   try {
-    console.log("[LOGOUT] 🔄 Logout request received");
+    if (process.env.NODE_ENV === "development") {
+      logger.log("[LOGOUT] 🔄 Logout request received");
+    }
     const token = req.headers.authorization?.split(' ')[1];
     
     if (token) {
-      console.log("[LOGOUT] ✅ Token found in header");
+      if (process.env.NODE_ENV === "development") {
+        logger.log("[LOGOUT] ✅ Token found in header");
+      }
       // Decode token KHÔNG verify expiry
       const decoded = jwt.decode(token); // Không dùng verify!
       
       if (decoded) {
-        console.log("[LOGOUT] 📝 Token decoded, adding to blacklist");
+        if (process.env.NODE_ENV === "development") {
+          logger.log("[LOGOUT] 📏 Token decoded, adding to blacklist");
+        }
         // Thêm token vào blacklist ngay cả khi expired
         await TokenBlacklist.create({
           token: token,
           expiresAt: new Date(decoded.exp * 1000),
         });
-        console.log("[LOGOUT] ✅ Token added to blacklist");
+        if (process.env.NODE_ENV === "development") {
+          logger.log("[LOGOUT] ✅ Token added to blacklist");
+        }
       }
     }
     
@@ -674,15 +718,21 @@ exports.logout = async (req, res) => {
     };
     
     res.clearCookie("jwt", cookieOptions);
-    console.log("[LOGOUT] ✅ Cookie cleared");
+    if (process.env.NODE_ENV === "development") {
+      logger.log("[LOGOUT] ✅ Cookie cleared");
+    }
     
     res.status(200).json({
       status: "success",
       message: "Đã đăng xuất thành công",
     });
-    console.log("[LOGOUT] ✅ Logout response sent");
+    if (process.env.NODE_ENV === "development") {
+      logger.log("[LOGOUT] ✅ Logout response sent");
+    }
   } catch (error) {
-    console.error("[LOGOUT] ❌ Error:", error.message);
+    if (process.env.NODE_ENV === "development") {
+      logger.error("[LOGOUT] ❌ Error:", error.message);
+    }
     res.status(200).json({
       status: "success",
       message: "Đã đăng xuất thành công",

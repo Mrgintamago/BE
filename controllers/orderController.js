@@ -3,6 +3,7 @@ const factory = require("./handlerFactory");
 const catchAsync = require("./../utils/catchAsync");
 const AppError = require("./../utils/appError");
 const moment = require("moment");
+const logger = require("../utils/logger");
 const mailTemplate = require("./mailTemplate");
 const Product = require("../models/productModel");
 const sendEmail = require("../utils/email");
@@ -60,66 +61,92 @@ exports.getTableOrder = factory.getTable(Order);
 exports.createOrder = factory.createOne(Order);
 // Tạo đơn cho khách chưa đăng nhập (không gắn user)
 exports.createOrderGuest = catchAsync(async (req, res, next) => {
-  console.log("🔵 [1] createOrderGuest called");
-  console.log("🔵 [2] req.body:", JSON.stringify(req.body, null, 2));
+  logger.log("🔵 [1] createOrderGuest called");
+  logger.log("🔵 [2] req.body:", JSON.stringify(req.body, null, 2));
   
   // SECURITY: Input validation
   // Email: optional, but if provided must be valid
   if (req.body.email && !validators.email.test(req.body.email)) {
-    console.warn("❌ [VALIDATION] Email invalid:", req.body.email);
+    logger.warn("❌ [VALIDATION] Email invalid:", req.body.email);
     return next(new AppError("Email không hợp lệ", 400));
   }
-  console.log("✅ [VALIDATION] Email OK (optional field)");
+  logger.log("✅ [VALIDATION] Email OK (optional field)");
   
   if (!req.body.phone || !validators.phone.test(req.body.phone)) {
-    console.warn("❌ [VALIDATION] Phone invalid:", req.body.phone);
+    logger.warn("❌ [VALIDATION] Phone invalid:", req.body.phone);
     return next(new AppError("Số điện thoại không hợp lệ (phải là 10-11 chữ số bắt đầu từ 0)", 400));
   }
-  console.log("✅ [VALIDATION] Phone OK");
+  logger.log("✅ [VALIDATION] Phone OK");
   
   if (!req.body.address || !validators.address.test(req.body.address)) {
-    console.warn("❌ [VALIDATION] Address invalid:", req.body.address);
+    logger.warn("❌ [VALIDATION] Address invalid:", req.body.address);
     return next(new AppError("Địa chỉ không hợp lệ (5-200 ký tự)", 400));
   }
-  console.log("✅ [VALIDATION] Address OK");
+  logger.log("✅ [VALIDATION] Address OK");
   
   if (!req.body.receiver || req.body.receiver.trim().length < 2) {
-    console.warn("❌ [VALIDATION] Receiver invalid:", req.body.receiver);
+    logger.warn("❌ [VALIDATION] Receiver invalid:", req.body.receiver);
     return next(new AppError("Tên người nhận không hợp lệ", 400));
   }
-  console.log("✅ [VALIDATION] Receiver OK");
+  logger.log("✅ [VALIDATION] Receiver OK");
   
   if (!req.body.cart || !Array.isArray(req.body.cart) || req.body.cart.length === 0) {
-    console.warn("❌ [VALIDATION] Cart invalid:", req.body.cart);
+    logger.warn("❌ [VALIDATION] Cart invalid:", req.body.cart);
     return next(new AppError("Giỏ hàng không hợp lệ", 400));
   }
-  console.log("✅ [VALIDATION] Cart OK");
+  logger.log("✅ [VALIDATION] Cart OK");
+  
+  // Kiểm tra số lượng sản phẩm không vượt quá tồn kho
+  try {
+    for (const item of req.body.cart) {
+      const product = await Product.findById(item.product);
+      if (!product) {
+        logger.warn("❌ [VALIDATION] Product not found:", item.product);
+        return next(new AppError(`Sản phẩm không tồn tại: ${item.product}`, 400));
+      }
+      if (item.quantity > product.quantity) {
+        logger.warn("❌ [VALIDATION] Insufficient inventory:", {
+          productId: item.product,
+          requested: item.quantity,
+          available: product.quantity
+        });
+        return next(new AppError(`Sản phẩm "${product.title}" chỉ còn ${product.quantity} cái, không thể mua ${item.quantity} cái`, 400));
+      }
+    }
+    logger.log("✅ [VALIDATION] Inventory OK for all products");
+  } catch (err) {
+    if (err.message && err.message.includes("Sản phẩm")) {
+      return next(err);
+    }
+    logger.error("❌ [VALIDATION] Error checking inventory:", err.message);
+    return next(new AppError("Lỗi kiểm tra tồn kho", 500));
+  }
   
   if (!req.body.totalPrice || typeof req.body.totalPrice !== 'number' || req.body.totalPrice <= 0) {
-    console.warn("❌ [VALIDATION] Price invalid:", req.body.totalPrice);
+    logger.warn("❌ [VALIDATION] Price invalid:", req.body.totalPrice);
     return next(new AppError("Tổng giá không hợp lệ", 400));
   }
-  console.log("✅ [VALIDATION] Price OK");
+  logger.log("✅ [VALIDATION] Price OK");
   
   // SECURITY: Validate payment method
   const validPaymentMethods = ["tiền mặt", "payos"];
   if (!req.body.payments || !validPaymentMethods.includes(req.body.payments)) {
-    console.warn("❌ [VALIDATION] Payment method invalid:", req.body.payments);
+    logger.warn("❌ [VALIDATION] Payment method invalid:", req.body.payments);
     return next(new AppError("Phương thức thanh toán không hợp lệ (tiền mặt hoặc payos)", 400));
   }
-  console.log("✅ [VALIDATION] Payments OK:", req.body.payments);
+  logger.log("✅ [VALIDATION] Payments OK:", req.body.payments);
   
   try {
-    console.log("🔵 [3] All validations passed, creating order...");
+    logger.log("🔵 [3] All validations passed, creating order...");
     const doc = await Order.create({
       ...req.body,
       user: null,
     });
-    console.log("✅ [4] Order created successfully:", doc._id);
+    logger.log("✅ [4] Order created successfully:", doc._id);
     
-    // Gửi mail xác nhận cho khách không đăng nhập (nếu có email trong payload)
+    // Gửi mail xác nhận cho khách không đăng nhập (chỉ khi thanh toán tiền mặt - PayOS sẽ gửi sau khi webhook confirm)
     try {
-      if (req.body.email) {
+      if (req.body.email && req.body.payments === "tiền mặt") {
         const domain = `https://tqn.onrender.com`;
         const message = mailTemplate(doc, domain);
         await sendEmail({
@@ -127,49 +154,78 @@ exports.createOrderGuest = catchAsync(async (req, res, next) => {
           subject: "Xác nhận đặt hàng thành công",
           message,
         });
-        console.log("✅ [5] Confirmation email sent to:", req.body.email);
+        logger.log("✅ [5] Confirmation email sent to:", req.body.email);
       }
     } catch (err) {
-      console.log("⚠️ [5] Email error (non-blocking):", err.message);
+      logger.log("⚠️ [5] Email error (non-blocking):", err.message);
       // Email error không gây lỗi chính, tiếp tục trả về order
     }
 
-    console.log("✅ [6] Returning order response");
+    logger.log("✅ [6] Returning order response");
     res.status(201).json({
       status: "success",
       data: doc,
     });
   } catch (err) {
-    console.error("❌ [ERROR] Exception creating order:", err.message);
-    console.error("❌ [ERROR] Full stack:", err);
+    logger.error("❌ [ERROR] Exception creating order:", err.message);
+    logger.error("❌ [ERROR] Full stack:", err);
     return next(new AppError(`Lỗi tạo đơn hàng: ${err.message}`, 500));
   }
 });
 
-// SECURITY: Get order with authorization check (object-level ownership)
-exports.getOrder = catchAsync(async (req, res, next) => {
-  const doc = await Order.findById(req.params.id).populate({
-    path: "user",
-    select: "name email phone",
-  });
-  
-  if (!doc) {
-    return next(new AppError("Không tìm thấy dữ liệu với ID này", 404));
+// SECURITY: Get order - public endpoint (no auth required) for payment verification
+// Guest orders (user=null) can be accessed without auth
+exports.getOrder = async (req, res, next) => {
+  try {
+    logger.log("🔵 [getOrder] Called with ID:", req.params.id);
+    
+    const doc = await Order.findById(req.params.id);
+    logger.log("🔵 [getOrder] Order found:", doc ? "YES" : "NO");
+    
+    if (!doc) {
+      logger.error("❌ [getOrder] Order not found");
+      return res.status(404).json({
+        status: "error",
+        message: "Không tìm thấy dữ liệu với ID này",
+      });
+    }
+    
+    logger.log("🔵 [getOrder] User authenticated:", !!req.user);
+    
+    // For authenticated users, check ownership
+    if (req.user) {
+      const adminRoles = ["super_admin", "admin", "manager", "sales_staff"];
+      const isAdmin = adminRoles.includes(req.user?.role);
+      const isOwner = doc.user?._id?.toString() === req.user?._id?.toString();
+      
+      logger.log("🔵 [getOrder] isAdmin:", isAdmin, "isOwner:", isOwner);
+      
+      if (!isAdmin && !isOwner) {
+        logger.error("❌ [getOrder] User not authorized");
+        return res.status(403).json({
+          status: "error",
+          message: "Bạn không có quyền xem đơn hàng này",
+        });
+      }
+    }
+    // If no user authenticated, allow access (public endpoint)
+    
+    logger.log("✅ [getOrder] Returning order:", doc._id);
+    return res.status(200).json({
+      status: "success",
+      data: {
+        data: doc,
+      },
+    });
+  } catch (err) {
+    logger.error("❌ [getOrder] Exception:", err.message);
+    logger.error("❌ [getOrder] Stack:", err.stack);
+    return res.status(500).json({
+      status: "error",
+      message: err.message,
+    });
   }
-  
-  // SECURITY: Check ownership - user can only see their own orders, admin can see all
-  const adminRoles = ["super_admin", "admin", "manager", "sales_staff"];
-  if (!adminRoles.includes(req.user.role) && doc.user && doc.user._id.toString() !== req.user._id.toString()) {
-    return next(new AppError("Bạn không có quyền xem đơn hàng này", 403));
-  }
-  
-  res.status(200).json({
-    status: "success",
-    data: {
-      data: doc,
-    },
-  });
-});
+};
 
 exports.getAllOrders = factory.getAll(Order);
 exports.updateOrder = catchAsync(async (req, res, next) => {
@@ -199,7 +255,7 @@ exports.updateOrder = catchAsync(async (req, res, next) => {
       });
     }
   } catch (err) {
-    console.log(err);
+    logger.log(err);
   } finally {
     return res.status(200).json({
       status: "success",
@@ -212,9 +268,9 @@ exports.updateOrder = catchAsync(async (req, res, next) => {
 exports.deleteOrder = factory.deleteOne(Order);
 exports.isOwner = factory.checkPermission(Order);
 exports.setUser = (req, res, next) => {
-  console.log("🔵 createOrder - req.body before setUser:", req.body);
+  logger.log("🔵 createOrder - req.body before setUser:", req.body);
   if (!req.body.user) req.body.user = req.user;
-  console.log("🔵 createOrder - req.body after setUser:", req.body);
+  logger.log("🔵 createOrder - req.body after setUser:", req.body);
   next();
 };
 exports.countStatus = catchAsync(async (req, res, next) => {

@@ -21,7 +21,13 @@
         data-bs-toggle="dropdown"
         aria-expanded="false"
       >
-        <span class="mr-2 d-none d-lg-inline text-gray-600 small">Admin</span>
+        <span class="mr-2 d-none d-lg-inline text-gray-600 small"><%= 
+          user.role === 'super_admin' ? 'Super Admin' : 
+          user.role === 'admin' ? 'Admin' : 
+          user.role === 'manager' ? 'Manager' : 
+          user.role === 'sales_staff' ? 'Sales Staff' : 
+          'User' 
+        %></span>
         <img class="img-profile rounded-circle" src="<%= user.avatar%>" />
       </button>
       <!-- Dropdown - User Information -->

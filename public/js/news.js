@@ -65,9 +65,10 @@ const loadData = async () => {
           },
         },
         {
-          data: "author",
-          render: function (data) {
-            return '<div class="my-3">' + (data?.name || "N/A") + "</div>";
+          data: "authorName",
+          render: function (data, type, row) {
+            // Nếu authorName không có, dùng author.name (cho bài cũ)
+            return '<div class="my-3">' + (data || row.author?.name || "N/A") + "</div>";
           },
         },
         {
@@ -95,7 +96,7 @@ const loadData = async () => {
           data: null,
           render: function (row) {
             const currentRole = typeof currentUserRole !== "undefined" ? currentUserRole : "";
-            const canEdit = currentRole === "super_admin" || currentRole === "admin";
+            const canEdit = currentRole === "super_admin" || currentRole === "admin" || currentRole === "sales_staff";
             
             let buttons = [];
             if (canEdit) {
@@ -116,6 +117,7 @@ const loadData = async () => {
 
 function reloadData() {
   if ($.fn.DataTable.isDataTable("#sample_data")) {
+    console.log("DataTable reloading...");
     $("#sample_data").DataTable().ajax.reload(null, false);
     console.log("DataTable reloaded");
   } else {
@@ -197,6 +199,11 @@ $("#publish-btn").on("click", function () {
   formData.append("title", title || plainText.substring(0, 50));
   formData.append("content", content);
   formData.append("status", status);
+  
+  // Always capture and send author name - fallback to empty string if not provided
+  const authorName = $("#author-name").val() ? $("#author-name").val().trim() : "";
+  formData.append("authorName", authorName);
+  
   // Không gửi mảng rỗng JSON, chỉ gửi file thực tế
   // formData.append("images", JSON.stringify([]));
 
@@ -308,6 +315,9 @@ $(document).on("click", ".edit", function () {
       
       $("#edit_status").val(news.status || "draft");
       
+      // Set author name if exists, else set from user name
+      $("#author-name").val(news.authorName || "");
+      
       currentImages = news.images || [];
       updateCurrentImages();
       
@@ -392,6 +402,11 @@ $("#sample_form").on("submit", function (e) {
   formData.append("title", $("#edit_title").val());
   formData.append("content", editContent);
   formData.append("status", $("#edit_status").val());
+  
+  // Always capture and send author name - fallback to empty string if not provided
+  const authorName = $("#author-name").val() ? $("#author-name").val().trim() : "";
+  formData.append("authorName", authorName);
+  
   formData.append("images", JSON.stringify(currentImages));
 
   const files = $("#edit_images")[0].files;
@@ -541,6 +556,15 @@ $(document).ready(function () {
       $(this).addClass("active");
       return false;
     }
+  });
+  
+  // Reset form fields khi modal đóng
+  $("#action_modal").on("hidden.bs.modal", function () {
+    $("#sample_form")[0].reset();
+    selectedImages = [];
+    currentImages = [];
+    $("#new-images-preview").empty();
+    $("#current-images").empty();
   });
 });
 

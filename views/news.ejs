@@ -293,13 +293,20 @@
     </div>
 
     <!-- Form đăng bài giống Facebook -->
-    <% const canManageNews = typeof user !== "undefined" && (user.role === "super_admin" || user.role === "admin"); %>
+    <% const canManageNews = typeof user !== "undefined" && (user.role === "super_admin" || user.role === "admin" || user.role === "sales_staff"); %>
     <% if (canManageNews) { %>
     <div class="news-post-container">
         <div class="news-post-header">
             <i class="fas fa-user-circle fa-2x text-primary"></i>
             <div class="user-info flex-grow-1">
-                <div>Admin</div>
+                <input 
+                    type="text" 
+                    id="author-name" 
+                    class="form-control" 
+                    placeholder="Tên tác giả (để trống nếu dùng tên đăng nhập)"
+                    value=""
+                    style="margin-bottom: 8px; font-size: 14px;"
+                />
                 <select id="status" class="status-select">
                     <option value="draft">Bản nháp</option>
                     <option value="published">Công khai</option>
@@ -425,6 +432,11 @@
                 <div class="modal-body">
                     <input type="hidden" name="action" id="action" value="Edit">
                     <input type="hidden" name="id" id="id">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Tên tác giả</label>
+                        <input type="text" name="authorName" id="author-name" class="form-control" placeholder="Tên tác giả" />
+                    </div>
                     
                     <div class="mb-3">
                         <label class="form-label">Tiêu đề</label>

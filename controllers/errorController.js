@@ -1,4 +1,5 @@
 const AppError = require('./../utils/appError');
+const logger = require('../utils/logger');
 
 const handleCastErrorDB = err => {
   const message = `Invalid ${err.path}: ${err.value}.`;
@@ -9,7 +10,7 @@ const handleDuplicateFieldsDB = err => {
   // Thêm kiểm tra null/undefined để tránh crash khi errmsg không tồn tại
   const match = err.errmsg ? err.errmsg.match(/(["'])(\\?.)*?\1/) : null;
   const value = match ? match[0] : (err.keyValue ? JSON.stringify(err.keyValue) : 'unknown');
-  console.log(value);
+  logger.log(value);
 
   const message = `Trùng lặp dữ liệu: ${value}. Vui lòng dùng giá trị khác!`;
   return new AppError(message, 400);
@@ -56,7 +57,7 @@ const sendErrorProd = (err, res) => {
     // Programming or other unknown error: don't leak error details
   } else {
     // 1) Log error
-    console.error('ERROR 💥', err);
+    logger.error('ERROR 💥', err);
 
     // 2) Send generic message
     res.status(500).json({

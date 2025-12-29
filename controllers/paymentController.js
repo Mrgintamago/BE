@@ -1,8 +1,10 @@
 const Order = require("../models/orderModel");
+const Product = require("../models/productModel");
 const catchAsync = require("../utils/catchAsync");
 const AppError = require("../utils/appError");
 const axios = require("axios");
 const crypto = require("crypto");
+const logger = require("../utils/logger");
 
 /**
  * PayOS Payment Controller
@@ -15,27 +17,27 @@ const PAYOS_API_KEY = process.env.PAYOS_API_KEY || "";
 const PAYOS_CHECKSUM_KEY = process.env.PAYOS_CHECKSUM_KEY || "";
 const PAYOS_API_URL = "https://api-merchant.payos.vn";
 
-console.log(`🔵 PayOS initialized`);
+logger.log(`🔵 PayOS initialized`);
 
 // Tạo QR code thanh toán PayOS
 exports.createPayOSPayment = catchAsync(async (req, res, next) => {
   const { orderId } = req.body;
   
-  console.log("🔵 createPayOSPayment - orderId:", orderId);
+  logger.log("🔵 createPayOSPayment - orderId:", orderId);
 
   if (!PAYOS_CLIENT_ID || !PAYOS_API_KEY || !PAYOS_CHECKSUM_KEY) {
-    console.error("❌ PayOS credentials missing");
+    logger.error("❌ PayOS credentials missing");
     return next(new AppError("PayOS credentials không được cấu hình", 500));
   }
 
   // Kiểm tra order tồn tại
   const order = await Order.findById(orderId);
   if (!order) {
-    console.error("❌ Order not found:", orderId);
+    logger.error("❌ Order not found:", orderId);
     return next(new AppError("Đơn hàng không tồn tại", 404));
   }
   
-  console.log("✅ Order found:", order._id);
+  logger.log("✅ Order found:", order._id);
 
   const amount = Math.round(order.totalPrice);
   const orderCode = parseInt(orderId.toString().slice(-8)) || Date.now();
@@ -59,12 +61,14 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
   };
 
   const frontendUrl = getFrontendUrl();
-  const returnUrl = `${frontendUrl}/payment-bank?method=payos&orderId=${orderId}`;
-  const cancelUrl = `${frontendUrl}/checkout?orderId=${orderId}`;
+  const backendUrl = process.env.BACKEND_URL || "https://tqn.onrender.com";
+  const returnUrl = `${frontendUrl}/payment-result?orderId=${orderId}&orderCode=${orderCode}`;
+  const cancelUrl = `${frontendUrl}/checkout?orderId=${orderId}&cancel=true`;
 
   try {
-    console.log("🔵 Creating PayOS payment request...");
-    console.log("🔵 Frontend URL detected:", frontendUrl);
+    logger.log("🔵 Creating PayOS payment request...");
+    logger.log("🔵 Frontend URL detected:", frontendUrl);
+    logger.log("🔵 Backend URL detected:", backendUrl);
     
     const paymentData = {
       orderCode: orderCode,
@@ -90,8 +94,8 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
       signature: signature,
     };
 
-    console.log("🔵 Signature:", signature);
-    console.log("🔵 Calling PayOS API...");
+    logger.log("🔵 Signature:", signature);
+    logger.log("🔵 Calling PayOS API...");
 
     const response = await axios.post(
       `${PAYOS_API_URL}/v2/payment-requests`,
@@ -105,12 +109,12 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
       }
     );
 
-    console.log("✅ PayOS payment link created successfully");
-    console.log("🔵 Full response:", JSON.stringify(response.data, null, 2));
+    logger.log("✅ PayOS payment link created successfully");
+    logger.log("🔵 Full response:", JSON.stringify(response.data, null, 2));
 
     // Handle error code 231: payment request already exists
     if (response.data.code === "231") {
-      console.warn("⚠️ [231] Payment request already exists, retrieving existing payment link...");
+      logger.warn("⚠️ [231] Payment request already exists, retrieving existing payment link...");
       
       try {
         // Call PayOS API to get existing payment request
@@ -125,12 +129,12 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
           }
         );
         
-        console.log("✅ Retrieved existing payment:", JSON.stringify(getPaymentResponse.data, null, 2));
+        logger.log("✅ Retrieved existing payment:", JSON.stringify(getPaymentResponse.data, null, 2));
         const existingPayment = getPaymentResponse.data.data;
         
         // If payment is CANCELLED or EXPIRED, cancel it and create new one
         if (existingPayment?.status === "CANCELLED" || existingPayment?.status === "EXPIRED") {
-          console.warn("⚠️ Existing payment is", existingPayment.status, "- creating new one...");
+          logger.warn("⚠️ Existing payment is", existingPayment.status, "- creating new one...");
           
           // Try to cancel the old payment
           try {
@@ -144,14 +148,14 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
                 },
               }
             );
-            console.log("✅ Cancelled old payment, creating new one...");
+            logger.log("✅ Cancelled old payment, creating new one...");
           } catch (cancelError) {
-            console.warn("⚠️ Failed to cancel old payment, trying to create with new code");
+            logger.warn("⚠️ Failed to cancel old payment, trying to create with new code");
           }
           
           // Create with new order code (add timestamp to make it unique)
           const newOrderCode = parseInt(orderId.toString().slice(-8)) + Date.now() % 10000 || Date.now();
-          console.log("🔵 Retrying with new orderCode:", newOrderCode);
+          logger.log("🔵 Retrying with new orderCode:", newOrderCode);
           
           const retryPaymentData = {
             orderCode: newOrderCode,
@@ -185,7 +189,7 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
           
           const newCheckoutUrl = retryResponse.data.data?.checkoutUrl;
           if (newCheckoutUrl) {
-            console.log("✅ New payment created with URL:", newCheckoutUrl);
+            logger.log("✅ New payment created with URL:", newCheckoutUrl);
             return res.status(200).json({
               status: "success",
               message: "PayOS Payment Link (new attempt)",
@@ -200,7 +204,7 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
         // If payment is PENDING, build checkout URL from paymentLinkId
         if (existingPayment?.id) {
           const existingCheckoutUrl = `https://pay.payos.vn/web/${existingPayment.id}`;
-          console.log("✅ Using existing pending payment URL:", existingCheckoutUrl);
+          logger.log("✅ Using existing pending payment URL:", existingCheckoutUrl);
           return res.status(200).json({
             status: "success",
             message: "PayOS Payment Link (existing)",
@@ -211,12 +215,12 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
           });
         }
       } catch (getError) {
-        console.warn("⚠️ Failed to retrieve existing payment:", getError.message);
+        logger.warn("⚠️ Failed to retrieve existing payment:", getError.message);
       }
       
       // Fallback: return from order if available
       if (order.invoicePayment?.payosCheckoutUrl) {
-        console.log("✅ Using saved checkout URL from order:", order.invoicePayment.payosCheckoutUrl);
+        logger.log("✅ Using saved checkout URL from order:", order.invoicePayment.payosCheckoutUrl);
         return res.status(200).json({
           status: "success",
           message: "PayOS Payment Link (cached)",
@@ -234,11 +238,11 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
     const qrCode = response.data.data?.qrCode;
 
     if (!checkoutUrl) {
-      console.error("❌ No checkoutUrl in response");
+      logger.error("❌ No checkoutUrl in response");
       return next(new AppError("PayOS không trả về checkout URL", 500));
     }
 
-    console.log("✅ Checkout URL:", checkoutUrl);
+    logger.log("✅ Checkout URL:", checkoutUrl);
 
     // Lưu PayOS transaction ID vào order
     const updatedOrder = await Order.findByIdAndUpdate(orderId, {
@@ -249,7 +253,7 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
       },
     }, { new: true });
 
-    console.log("✅ Order updated:", updatedOrder._id);
+    logger.log("✅ Order updated:", updatedOrder._id);
 
     res.status(200).json({
       status: "success",
@@ -260,10 +264,11 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("❌ PayOS API Error:");
-    console.error("   Status:", error.response?.status);
-    console.error("   Data:", error.response?.data);
-    console.error("   Message:", error.message);
+    logger.error("❌ PayOS API Error:");
+    logger.error("   Status:", error.response?.status);
+    logger.error("   Data:", JSON.stringify(error.response?.data, null, 2));
+    logger.error("   Message:", error.message);
+    logger.error("   Full error:", error);
     return next(
       new AppError(
         `Lỗi PayOS: ${error.response?.data?.message || error.message}`,
@@ -275,67 +280,137 @@ exports.createPayOSPayment = catchAsync(async (req, res, next) => {
 
 // Xử lý PayOS webhook callback
 exports.payosCallback = catchAsync(async (req, res, next) => {
-  const { orderCode, amount, status, transactionNo } = req.body;
+  const { code, desc, success, data, signature } = req.body;
+  
+  logger.log("🔵 [WEBHOOK] PayOS callback received!");
+  logger.log("🔵 [WEBHOOK] Body:", JSON.stringify(req.body, null, 2));
+  logger.log("🔵 [WEBHOOK] Code:", code);
+  logger.log("🔵 [WEBHOOK] Success:", success);
+  logger.log("🔵 [WEBHOOK] Data:", JSON.stringify(data, null, 2));
 
-  if (!orderCode) {
+  if (!data || !data.orderCode) {
+    logger.error("❌ [WEBHOOK] Missing orderCode in data");
     return res.status(400).json({
-      status: "error",
-      message: "Thiếu order code",
+      code: "error",
+      desc: "Thiếu order code",
+      success: false,
+    });
+  }
+
+  // Verify signature (HMAC-SHA256)
+  try {
+    const signatureData = JSON.stringify(data);
+    const expectedSignature = crypto
+      .createHmac("sha256", PAYOS_CHECKSUM_KEY)
+      .update(signatureData)
+      .digest("hex");
+    
+    if (signature !== expectedSignature) {
+      logger.error("❌ [WEBHOOK] Signature mismatch!");
+      logger.error("   Expected:", expectedSignature);
+      logger.error("   Got:", signature);
+      return res.status(403).json({
+        code: "error",
+        desc: "Signature không hợp lệ",
+        success: false,
+      });
+    }
+    logger.log("✅ [WEBHOOK] Signature verified");
+  } catch (signErr) {
+    logger.error("❌ [WEBHOOK] Signature verification error:", signErr.message);
+    return res.status(400).json({
+      code: "error",
+      desc: "Lỗi xác thực chữ ký",
+      success: false,
     });
   }
 
   // Tìm order theo payosOrderCode
   const order = await Order.findOne({
-    "invoicePayment.payosOrderCode": orderCode,
+    "invoicePayment.payosOrderCode": data.orderCode,
   });
 
+  logger.log("🔵 [WEBHOOK] Found order:", order ? order._id : "NOT FOUND");
+
   if (!order) {
+    logger.error("❌ [WEBHOOK] Order not found with code:", data.orderCode);
     return res.status(404).json({
-      status: "error",
-      message: "Đơn hàng không tồn tại",
+      code: "error",
+      desc: "Đơn hàng không tồn tại",
+      success: false,
     });
   }
 
   // Cập nhật trạng thái đơn hàng dựa trên thanh toán
-  if (status === "PAID" || status === "SUCCESS") {
-    await Order.findByIdAndUpdate(order._id, {
+  if (success === true && code === "00") {
+    logger.log("✅ [WEBHOOK] Payment SUCCESSFUL, updating order...");
+    const updatedOrder = await Order.findByIdAndUpdate(order._id, {
       payments: "payos",
       status: "Processed",
       invoicePayment: {
         ...order.invoicePayment,
-        payosTransactionNo: transactionNo,
+        payosTransactionNo: data.reference,
         payDate: new Date(),
-        amount: amount || order.totalPrice,
+        amount: data.amount || order.totalPrice,
         status: "SUCCESS",
       },
-    });
+    }, { new: true });
 
+    logger.log("✅ [WEBHOOK] Order updated successfully, returning response");
+    // Email sẽ được gửi sau khi admin chấp nhận đơn hàng, không gửi ngay khi thanh toán
+    
+    // Deduct inventory when payment is confirmed
+    try {
+      if (updatedOrder.cart && Array.isArray(updatedOrder.cart)) {
+        for (const item of updatedOrder.cart) {
+          if (item.product && item.quantity) {
+            // item.product could be either Object with _id or string ID
+            const productId = (typeof item.product === 'object') 
+              ? (item.product._id || item.product.toString())
+              : item.product;
+            
+            if (!productId) continue;
+            
+            await Product.findByIdAndUpdate(
+              productId,
+              { $inc: { quantity: -item.quantity } },
+              { new: true }
+            );
+            logger.log(`✅ [INVENTORY] Deducted ${item.quantity} units from product ${productId}`);
+          }
+        }
+      }
+    } catch (invErr) {
+      logger.error("❌ [INVENTORY] Error deducting inventory:", invErr.message);
+      // Continue - don't fail the payment confirmation even if inventory deduction fails
+    }
+    
     res.status(200).json({
-      status: "success",
-      message: "Thanh toán PayOS thành công",
-      orderId: order._id,
-      amount: amount || order.totalPrice,
-    });
-  } else if (status === "PENDING") {
-    res.status(200).json({
-      status: "pending",
-      message: "Thanh toán đang chờ",
-      orderId: order._id,
+      code: "00",
+      desc: "Thanh toán PayOS thành công",
+      success: true,
+      data: {
+        orderId: order._id,
+      },
     });
   } else {
+    logger.log("❌ [WEBHOOK] Payment FAILED/CANCELLED with code:", code);
     // FAILED, CANCELLED
     await Order.findByIdAndUpdate(order._id, {
       status: "Cancelled",
       invoicePayment: {
         ...order.invoicePayment,
-        status: status,
+        status: code,
       },
     });
 
-    res.status(400).json({
-      status: "error",
-      message: `Thanh toán thất bại: ${status}`,
-      orderId: order._id,
+    res.status(200).json({
+      code: code,
+      desc: desc,
+      success: false,
+      data: {
+        orderId: order._id,
+      },
     });
   }
 });
@@ -410,7 +485,7 @@ exports.payosReturn = catchAsync(async (req, res, next) => {
       },
     });
   } catch (error) {
-    console.error("PayOS API Error:", error.response?.data || error.message);
+    logger.error("PayOS API Error:", error.response?.data || error.message);
     // Vẫn cho phép return khi có lỗi, chỉ log
     res.status(200).json({
       status: "success",
