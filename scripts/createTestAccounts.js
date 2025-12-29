@@ -29,7 +29,7 @@ async function createTestAccounts() {
       {
         name: "Super Admin",
         email: "superadmin@test.com",
-        password: "superadmin123",
+        password: "SuperAdmin123!",
         role: "super_admin",
       },
       {
@@ -95,7 +95,7 @@ async function createTestAccounts() {
     console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
     console.log("1. SUPER ADMIN (Cấu hình & phân quyền)");
     console.log("   Email: superadmin@test.com");
-    console.log("   Password: superadmin123");
+    console.log("   Password: SuperAdmin123!");
     console.log("   Quyền: Full access - Quản lý tất cả, bao gồm phân quyền\n");
     
     console.log("2. ADMIN (Vận hành shop)");

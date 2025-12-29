@@ -390,7 +390,38 @@ exports.updateUserPassword = catchAsync(async (req, res, next) => {
   });
 });
 
-exports.deleteUser = factory.deleteOne(User);
+exports.deleteUser = catchAsync(async (req, res, next) => {
+  // Get the user to be deleted
+  const userToDelete = await User.findById(req.params.id);
+
+  if (!userToDelete) {
+    return next(new AppError("Không tìm thấy dữ liệu với ID này", 404));
+  }
+
+  // Check if the user being deleted is a superadmin
+  if (userToDelete.role === "super_admin") {
+    // Count total number of superadmins in the system
+    const superAdminCount = await User.countDocuments({ role: "super_admin" });
+
+    // If this is the last superadmin, prevent deletion
+    if (superAdminCount === 1) {
+      return next(
+        new AppError(
+          "Không thể xóa superadmin duy nhất trong hệ thống. Vui lòng tạo một superadmin khác trước khi xóa superadmin này.",
+          400
+        )
+      );
+    }
+  }
+
+  // Delete the user if all checks pass
+  await User.findByIdAndDelete(req.params.id);
+
+  res.status(204).json({
+    status: "success",
+    data: null,
+  });
+});
 exports.getTableUser = factory.getTable(User);
 
 // Get table for admin users only (super_admin, admin, manager, sales_staff)
